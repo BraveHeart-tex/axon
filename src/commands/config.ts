@@ -1,5 +1,6 @@
 import inquirer from 'inquirer';
 import { setApiKey, getApiKey, deleteApiKey, listApiKeys } from '../utils/config.js';
+import { CREDENTIAL_KEYS, CredentialKey } from '../constants/config.js';
 
 export const configureApiKey = async () => {
   const { action } = await inquirer.prompt<{ action: 'set' | 'view' | 'delete' | 'list' }>([
@@ -18,8 +19,13 @@ export const configureApiKey = async () => {
     return;
   }
 
-  const { name } = await inquirer.prompt<{ name: string }>([
-    { type: 'input', name: 'name', message: 'Enter a name for the key:' },
+  const { name } = await inquirer.prompt<{ name: CredentialKey }>([
+    {
+      type: 'list',
+      name: 'name',
+      message: 'Enter a name for the key:',
+      choices: Object.values(CREDENTIAL_KEYS),
+    },
   ]);
 
   if (action === 'set') {
