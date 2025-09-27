@@ -1,30 +1,41 @@
 import inquirer from 'inquirer';
 import { execa } from 'execa';
 
-const TYPES = ['feat', 'fix', 'chore', 'docs', 'refactor', 'test', 'ci', 'perf', 'hotfix'];
+const commitLabels = [
+  'feat',
+  'fix',
+  'chore',
+  'docs',
+  'refactor',
+  'test',
+  'ci',
+  'perf',
+  'hotfix',
+] as const;
+
+type CommitLabel = (typeof commitLabels)[number];
+
 const JIRA_REGEX = /^(FE|ORD|DIS|PE|PRD|MEM|MOD)-[0-9]+$/;
 
 export const createFeatureBranch = async () => {
-  const { type } = await inquirer.prompt([
+  const { commitLabel } = await inquirer.prompt<{ commitLabel: CommitLabel }>([
     {
       type: 'list',
-      name: 'type',
+      name: 'commitLabel',
       message: 'Select a branch type:',
-      choices: TYPES,
+      choices: commitLabels,
     },
   ]);
 
-  const { jiraCode } = await inquirer.prompt([
+  const { jiraCode } = await inquirer.prompt<{ jiraCode: string }>([
     {
       type: 'input',
       name: 'jiraCode',
       message: 'Enter JIRA code (e.g., ORD-1325):',
-      validate: (input: string) => {
-        if ((!input && type === 'chore') || type === 'hotfix') return true;
-        return JIRA_REGEX.test(input)
+      validate: (input: string) =>
+        JIRA_REGEX.test(input)
           ? true
-          : '❌ Invalid JIRA code. Must match FE|ORD|DIS|PE|PRD|MEM|MOD-[0-9]+';
-      },
+          : '❌ Invalid JIRA code. Must match FE|ORD|DIS|PE|PRD|MEM|MOD-[0-9]+',
     },
   ]);
 
@@ -43,7 +54,7 @@ export const createFeatureBranch = async () => {
         .replace(/^-+|-+$/g, '')
     : '';
 
-  const branch = slug ? `${type}/${jiraCode}-${slug}` : `${type}/${jiraCode}`;
+  const branch = slug ? `${commitLabel}/${jiraCode}-${slug}` : `${commitLabel}/${jiraCode}`;
 
   console.log('🔄 Checking out develop and pulling latest changes...');
   try {
