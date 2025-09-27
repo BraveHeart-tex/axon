@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { createFeatureBranch } from '../commands/feature.js';
 import { createReleaseBranch } from '../commands/release.js';
+import { configureApiKey } from '../commands/config.js';
 
 const program = new Command();
 
@@ -19,6 +20,13 @@ program
   .description('Create a release branch')
   .action(async () => {
     await createReleaseBranch();
+  });
+
+program
+  .command('config')
+  .description('Manage API keys securely')
+  .action(async () => {
+    await configureApiKey();
   });
 
 program.parse(process.argv);
