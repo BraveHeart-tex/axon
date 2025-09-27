@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "incremental": false, // Clean builds for production
     "removeComments": true,
     "sourceMap": false, // No source maps in production

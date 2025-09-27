@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "axon": "./src/bin/cli.ts"
+    "axon": "./dist/bin/cli.js"
   },
   "lint-staged": {
     "*.{js,ts,json,cjs,mjs,md}": [
