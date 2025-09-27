@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { createFeatureBranch } from '../commands/feature.js';
 import { createReleaseBranch } from '../commands/release.js';
 import { configureApiKey } from '../commands/config.js';
+import { generateAICommit } from '../commands/commitAi.js';
 
 const program = new Command();
 
@@ -20,6 +21,13 @@ program
   .description('Create a release branch')
   .action(async () => {
     await createReleaseBranch();
+  });
+
+program
+  .command('commit ai')
+  .description('Generate a commit message with AI')
+  .action(async () => {
+    await generateAICommit();
   });
 
 program

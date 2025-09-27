@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { CredentialKey } from '../constants/config.js';
 
 const INDEX_PATH = path.join(os.homedir(), '.axon', 'keys.json');
 
@@ -10,14 +11,14 @@ export const ensureIndexFile = () => {
   if (!fs.existsSync(INDEX_PATH)) fs.writeFileSync(INDEX_PATH, JSON.stringify([]));
 };
 
-export const addKeyName = (name: string) => {
+export const addKeyName = (name: CredentialKey) => {
   ensureIndexFile();
   const keys = JSON.parse(fs.readFileSync(INDEX_PATH, 'utf-8')) as string[];
   if (!keys.includes(name)) keys.push(name);
   fs.writeFileSync(INDEX_PATH, JSON.stringify(keys, null, 2));
 };
 
-export const removeKeyName = (name: string) => {
+export const removeKeyName = (name: CredentialKey) => {
   ensureIndexFile();
   const keys = JSON.parse(fs.readFileSync(INDEX_PATH, 'utf-8')) as string[];
   const filtered = keys.filter((k) => k !== name);
