@@ -1,5 +1,5 @@
 import inquirer from 'inquirer';
-import { execa } from 'execa';
+import { checkoutAndCreateBranch } from '../utils/git.js';
 
 const commitLabels = [
   'feat',
@@ -57,19 +57,10 @@ export const createFeatureBranch = async () => {
   const branch = slug ? `${commitLabel}/${jiraCode}-${slug}` : `${commitLabel}/${jiraCode}`;
 
   console.log('🔄 Checking out develop and pulling latest changes...');
-  try {
-    await execa('git', ['checkout', 'develop'], { stdio: 'inherit' });
-    await execa('git', ['pull', 'origin', 'develop'], { stdio: 'inherit' });
-  } catch (err) {
-    console.error('❌ Failed to update develop branch:', err);
-    return;
-  }
 
   try {
-    console.log(`🌿 Creating branch: ${branch}`);
-    await execa('git', ['checkout', '-b', branch], { stdio: 'inherit' });
-    console.log(`✅ Branch ${branch} created from develop`);
-  } catch (err) {
-    console.error('❌ Failed to create branch:', err);
+    await checkoutAndCreateBranch('develop', branch);
+  } catch (error) {
+    console.error('❌ Git operation failed:', (error as Error).message);
   }
 };
