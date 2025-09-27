@@ -1,11 +1,10 @@
 import inquirer from 'inquirer';
 import { execa } from 'execa';
 
-const TYPES = ['feat', 'fix', 'chore', 'docs', 'refactor', 'test', 'ci', 'perf'];
+const TYPES = ['feat', 'fix', 'chore', 'docs', 'refactor', 'test', 'ci', 'perf', 'hotfix'];
 const JIRA_REGEX = /^(FE|ORD|DIS|PE|PRD|MEM|MOD)-[0-9]+$/;
 
 export const createFeatureBranch = async () => {
-
   const { type } = await inquirer.prompt([
     {
       type: 'list',
@@ -20,10 +19,12 @@ export const createFeatureBranch = async () => {
       type: 'input',
       name: 'jiraCode',
       message: 'Enter JIRA code (e.g., ORD-1325):',
-      validate: (input: string) =>
-        JIRA_REGEX.test(input)
+      validate: (input: string) => {
+        if ((!input && type === 'chore') || type === 'hotfix') return true;
+        return JIRA_REGEX.test(input)
           ? true
-          : '❌ Invalid JIRA code. Must match FE|ORD|DIS|PE|PRD|MEM|MOD-[0-9]+',
+          : '❌ Invalid JIRA code. Must match FE|ORD|DIS|PE|PRD|MEM|MOD-[0-9]+';
+      },
     },
   ]);
 
