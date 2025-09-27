@@ -10,7 +10,7 @@
     "incremental": true,
     "isolatedModules": false,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "."
   },
   "include": ["src/**/*", "eslint.config.ts"],
   "exclude": ["node_modules", "dist"]

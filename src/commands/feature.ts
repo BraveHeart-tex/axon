@@ -1,4 +1,5 @@
 import inquirer from 'inquirer';
+import { JIRA_REGEX } from '../constants/jira.js';
 import { checkoutAndCreateBranch } from '../utils/git.js';
 
 const commitLabels = [
@@ -14,8 +15,6 @@ const commitLabels = [
 ] as const;
 
 type CommitLabel = (typeof commitLabels)[number];
-
-const JIRA_REGEX = /^(FE|ORD|DIS|PE|PRD|MEM|MOD)-[0-9]+$/;
 
 export const createFeatureBranch = async () => {
   const { commitLabel } = await inquirer.prompt<{ commitLabel: CommitLabel }>([
