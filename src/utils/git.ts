@@ -29,3 +29,17 @@ export const checkoutAndCreateBranch = async (base: string, newBranch: string) =
   await pullBranch(base);
   await createBranch(newBranch);
 };
+
+export const getStagedChangesDiff = async (): Promise<string> => {
+  const { stdout } = await execa('git', [
+    'diff',
+    '--cached',
+    '--',
+    ':!*.lock',
+    ':!*.svg',
+    ':!*.png',
+    ':!*.jpg',
+    ':!*.jpeg',
+  ]);
+  return stdout;
+};
