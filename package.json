@@ -7,9 +7,16 @@
   "bin": {
     "axon": "./src/bin/cli.ts"
   },
+  "lint-staged": {
+    "*.{js,ts,json,cjs,mjs,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
   "scripts": {
     "dev": "tsx ./src/bin/cli.ts",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "husky"
   },
   "dependencies": {
     "chalk": "5.6.2",
@@ -26,7 +33,9 @@
     "eslint": "9.36.0",
     "eslint-plugin-import": "2.32.0",
     "globals": "16.4.0",
+    "husky": "9.1.7",
     "jiti": "2.6.0",
+    "lint-staged": "16.2.1",
     "prettier": "3.6.2",
     "ts-node": "10.9.2",
     "tsx": "4.20.6",
