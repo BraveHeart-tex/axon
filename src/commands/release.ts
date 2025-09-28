@@ -2,6 +2,7 @@ import inquirer from 'inquirer';
 import { JIRA_REGEX } from '../constants/jira.js';
 import { checkoutBranch, createBranch, pullBranch } from '../utils/git.js';
 import { execa } from 'execa';
+import { logger } from '../utils/logger.js';
 
 export const createReleaseBranch = async () => {
   const { jiraCode } = await inquirer.prompt<{ jiraCode: string }>([
@@ -75,26 +76,26 @@ export const createReleaseBranch = async () => {
   }
 
   try {
-    console.log('🔄 Checking out develop and pulling latest changes...');
+    logger.info('🔄 Checking out develop and pulling latest changes...');
     await checkoutBranch('develop');
     await pullBranch('develop');
 
-    console.log(`🌿 Creating release branch: ${branch}`);
+    logger.info(`🌿 Creating release branch: ${branch}`);
     await createBranch(branch);
 
-    console.log('🍒 Cherry-picking commits:');
+    logger.info('🍒 Cherry-picking commits:');
     for (const commit of commits) {
-      console.log(`- ${commit}`);
+      logger.info(`- ${commit}`);
       try {
         await execa('git', ['cherry-pick', commit], { stdio: 'inherit' });
       } catch {
-        console.error(`❌ Cherry-pick failed on commit ${commit} — resolve conflicts manually.`);
+        logger.error(`Cherry-pick failed on commit ${commit} — resolve conflicts manually.`);
         return;
       }
     }
 
-    console.log(`✅ Release branch ${branch} created and commits cherry-picked.`);
+    logger.info(`✅ Release branch ${branch} created and commits cherry-picked.`);
   } catch (err) {
-    console.error('❌ Git operation failed:', (err as Error).message);
+    logger.error(`Git operation failed: ${(err as Error).message}`);
   }
 };

@@ -1,6 +1,7 @@
 import inquirer from 'inquirer';
 import { JIRA_REGEX } from '../constants/jira.js';
 import { checkoutAndCreateBranch } from '../utils/git.js';
+import { logger } from '../utils/logger.js';
 
 const commitLabels = [
   'feat',
@@ -55,11 +56,11 @@ export const createFeatureBranch = async () => {
 
   const branch = slug ? `${commitLabel}/${jiraCode}-${slug}` : `${commitLabel}/${jiraCode}`;
 
-  console.log('🔄 Checking out develop and pulling latest changes...');
+  logger.info('Checking out develop and pulling latest changes...');
 
   try {
     await checkoutAndCreateBranch('develop', branch);
   } catch (error) {
-    console.error('❌ Git operation failed:', (error as Error).message);
+    logger.error(`Git operation failed: ${(error as Error).message}`);
   }
 };
