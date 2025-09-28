@@ -2,11 +2,12 @@ import { getStagedChangesDiff } from '../utils/git.js';
 import { getApiKey } from '../utils/config.js';
 import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { streamAiResponse } from '../utils/ai.js';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 import { getCommitMessagePrompt } from '../constants/prompts.js';
 import { logger } from '../utils/logger.js';
 
 export const generateAICommit = async () => {
+  let spinner: Ora | null = null;
   try {
     const aiApiKey = await getApiKey(CREDENTIAL_KEYS.AI);
     // TODO: Trigger a set-command here to set the ai-key
@@ -21,7 +22,7 @@ export const generateAICommit = async () => {
       return;
     }
 
-    const spinner = ora('🤖 Generating commit message with AI...').start();
+    spinner = ora('🤖 Generating commit message with AI...').start();
 
     let fullMessage = '';
 
@@ -42,6 +43,9 @@ export const generateAICommit = async () => {
     logger.info('\n✨ Suggested commit message:\n');
     logger.info(fullMessage);
   } catch (error) {
+    if (spinner) {
+      spinner.fail(String(error));
+    }
     logger.error(
       `An error occurred while generating commit message: ${error instanceof Error ? error.message : error}`,
     );

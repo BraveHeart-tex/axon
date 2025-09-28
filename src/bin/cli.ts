@@ -4,6 +4,7 @@ import { createFeatureBranch } from '../commands/feature.js';
 import { createReleaseBranch } from '../commands/release.js';
 import { configureApiKey } from '../commands/config.js';
 import { generateAICommit } from '../commands/commitAi.js';
+import { reviewAi } from '../commands/reviewAi.js';
 
 const program = new Command();
 
@@ -24,10 +25,17 @@ program
   });
 
 program
-  .command('commit ai')
+  .command('commit-ai')
   .description('Generate a commit message with AI')
   .action(async () => {
     await generateAICommit();
+  });
+
+program
+  .command('review-ai')
+  .description('Generate a code review with ai')
+  .action(async () => {
+    await reviewAi();
   });
 
 program

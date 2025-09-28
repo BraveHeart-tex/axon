@@ -25,3 +25,19 @@ ${diff.trim().slice(0, 5000)}
 ---END---
 `.trim();
 };
+
+export const getReviewPrompt = (diff: string) => {
+  return `
+  You are a senior developer reviewing code.
+Please provide a self-review for the following staged changes:
+
+${diff}
+
+Highlight:
+- Possible bugs
+- Code smells
+- Naming issues
+- Missing tests
+- Suggestions for improvements
+  `;
+};
