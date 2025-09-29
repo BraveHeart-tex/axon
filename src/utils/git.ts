@@ -43,3 +43,28 @@ export const getStagedChangesDiff = async (): Promise<string> => {
   ]);
   return stdout;
 };
+
+export const getRecentCommitsForDevelop = async (
+  limit: number = 50,
+): Promise<{ name: string; value: string }[]> => {
+  const { stdout } = await execa('git', [
+    'log',
+    '--pretty=format:%h|%an|%ad|%s',
+    '-n',
+    String(limit),
+    'develop',
+  ]);
+
+  return stdout.split('\n').map((line) => {
+    const [hash, author, date, ...messageParts] = line.split('|');
+    const message = messageParts.join('|');
+    return {
+      name: `${hash} | ${author} | ${date} | ${message}`,
+      value: hash,
+    };
+  });
+};
+
+export const cherryPickCommit = async (commitHash: string) => {
+  return execa('git', ['cherry-pick', commitHash], { stdio: 'inherit' });
+};

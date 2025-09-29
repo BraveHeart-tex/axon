@@ -1,7 +1,12 @@
 import inquirer from 'inquirer';
 import { JIRA_REGEX } from '../constants/jira.js';
-import { checkoutBranch, createBranch, pullBranch } from '../utils/git.js';
-import { execa } from 'execa';
+import {
+  checkoutBranch,
+  cherryPickCommit,
+  createBranch,
+  getRecentCommitsForDevelop,
+  pullBranch,
+} from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 
 export const createReleaseBranch = async () => {
@@ -45,22 +50,7 @@ export const createReleaseBranch = async () => {
 
     commits = commitHashes.split(/\s+/);
   } else {
-    const { stdout } = await execa('git', [
-      'log',
-      '--pretty=format:%h|%an|%ad|%s',
-      '-n',
-      '20',
-      'develop',
-    ]);
-
-    const recentCommits = stdout.split('\n').map((line) => {
-      const [hash, author, date, ...messageParts] = line.split('|');
-      const message = messageParts.join('|');
-      return {
-        name: `${hash} | ${author} | ${date} | ${message}`,
-        value: hash,
-      };
-    });
+    const recentCommits = await getRecentCommitsForDevelop();
 
     const { selectedCommits } = await inquirer.prompt<{ selectedCommits: string[] }>([
       {
@@ -87,9 +77,9 @@ export const createReleaseBranch = async () => {
     for (const commit of commits) {
       logger.info(`- ${commit}`);
       try {
-        await execa('git', ['cherry-pick', commit], { stdio: 'inherit' });
+        await cherryPickCommit(commit);
       } catch {
-        logger.error(`Cherry-pick failed on commit ${commit} — resolve conflicts manually.`);
+        logger.error(`Cherry-pick failed on commit ${commit}`);
         return;
       }
     }
