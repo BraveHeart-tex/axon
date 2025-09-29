@@ -76,9 +76,9 @@ export const createReleaseBranch = async () => {
   }
 
   try {
-    logger.info('🔄 Checking out develop and pulling latest changes...');
-    await checkoutBranch('develop');
-    await pullBranch('develop');
+    logger.info('🔄 Checking out main and pulling latest changes...');
+    await checkoutBranch('main');
+    await pullBranch('main');
 
     logger.info(`🌿 Creating release branch: ${branch}`);
     await createBranch(branch);
