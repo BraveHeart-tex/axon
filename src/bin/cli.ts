@@ -34,8 +34,18 @@ program
 program
   .command('review-ai')
   .description('Generate a code review with ai')
-  .action(async () => {
-    await reviewAi();
+  .option('--diff <diff>', 'Provide diff inline')
+  .option('--diff-file <path>', 'Provide path to diff file')
+  .action(async (options) => {
+    let diffContent = '';
+
+    if (options.diff) {
+      diffContent = options.diff;
+    } else if (options.diffFile) {
+      const fs = await import('fs');
+      diffContent = fs.readFileSync(options.diffFile, 'utf-8');
+    }
+    await reviewAi(diffContent);
   });
 
 program

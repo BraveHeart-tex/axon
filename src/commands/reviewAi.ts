@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getReviewPrompt } from '../constants/prompts.js';
 
-export const reviewAi = async () => {
+export const reviewAi = async (diffContent: string) => {
   let spinner: Ora | null = null;
   try {
     const aiApiKey = await getApiKey(CREDENTIAL_KEYS.AI);
@@ -18,7 +18,7 @@ export const reviewAi = async () => {
       return;
     }
 
-    const stagedChangesDiff = await getStagedChangesDiff();
+    const stagedChangesDiff = diffContent || (await getStagedChangesDiff());
     if (!stagedChangesDiff) {
       logger.error('No staged changes found.');
       return;
