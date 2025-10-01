@@ -1,4 +1,8 @@
-import { getStagedChangesDiff } from '../utils/git.js';
+import {
+  getCurrentBranchName,
+  getStagedChangesDiff,
+  inferJiraScopeFromBranch,
+} from '../utils/git.js';
 import { getApiKey } from '../utils/config.js';
 import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { streamAiResponse } from '../utils/ai.js';
@@ -25,10 +29,12 @@ export const generateAICommit = async () => {
     spinner = ora('🤖 Generating commit message with AI...').start();
 
     let fullMessage = '';
+    const branchName = await getCurrentBranchName();
+    const inferredScope = inferJiraScopeFromBranch(branchName);
 
     await streamAiResponse({
       apiKey: aiApiKey,
-      prompt: getCommitMessagePrompt({ diff: stagedChangesDiff, inferredScope: '' }),
+      prompt: getCommitMessagePrompt({ diff: stagedChangesDiff, inferredScope }),
       onChunk: (chunk) => {
         fullMessage += chunk;
       },

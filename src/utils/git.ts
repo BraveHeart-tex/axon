@@ -68,3 +68,17 @@ export const getRecentCommitsForDevelop = async (
 export const cherryPickCommit = async (commitHash: string) => {
   return execa('git', ['cherry-pick', commitHash], { stdio: 'inherit' });
 };
+
+export const getCurrentBranchName = async () => {
+  const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+  return stdout;
+};
+
+export const inferJiraScopeFromBranch = (branch: string) => {
+  const JIRA_REGEX = /\b(?:FE|ORD|DIS|PE|PRD|MEM|MOD)-\d+\b/;
+
+  const scopeMatch = branch.match(JIRA_REGEX);
+  if (!scopeMatch) return '';
+
+  return scopeMatch ? scopeMatch[0] : '';
+};
