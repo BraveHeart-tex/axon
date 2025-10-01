@@ -5,6 +5,7 @@ import { createReleaseBranch } from '../commands/release.js';
 import { configureApiKey } from '../commands/config.js';
 import { generateAICommit } from '../commands/commitAi.js';
 import { reviewAi } from '../commands/reviewAi.js';
+import { searchCommits } from '../commands/searchCommits.js';
 
 const program = new Command();
 
@@ -46,6 +47,13 @@ program
       diffContent = fs.readFileSync(options.diffFile, 'utf-8');
     }
     await reviewAi(diffContent);
+  });
+
+program
+  .command('search-commits <jiraKey>')
+  .description('Search commits by JIRA issue key')
+  .action(async (jiraKey) => {
+    await searchCommits(jiraKey);
   });
 
 program
