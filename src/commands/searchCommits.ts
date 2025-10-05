@@ -2,6 +2,10 @@ import { logger } from '../utils/logger.js';
 import inquirer from 'inquirer';
 import { getCommitsByGrep, parseGitLog } from '../utils/git.js';
 
+interface SearchCommitsAnswers {
+  selectedCommits: string[];
+}
+
 export const searchCommits = async (jiraKey: string) => {
   const stdout = await getCommitsByGrep(jiraKey);
 
@@ -12,7 +16,7 @@ export const searchCommits = async (jiraKey: string) => {
 
   const commits = parseGitLog(stdout);
 
-  const { selectedCommits } = await inquirer.prompt([
+  const { selectedCommits } = await inquirer.prompt<SearchCommitsAnswers>([
     {
       type: 'checkbox',
       name: 'selectedCommits',
@@ -24,5 +28,5 @@ export const searchCommits = async (jiraKey: string) => {
     },
   ]);
 
-  logger.info(`You selected: ${selectedCommits}`);
+  logger.info(`You selected: ${selectedCommits.join(' ')}`);
 };
