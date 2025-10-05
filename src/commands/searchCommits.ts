@@ -1,22 +1,16 @@
-import { execa } from 'execa';
 import { logger } from '../utils/logger.js';
 import inquirer from 'inquirer';
+import { getCommitsByGrep, parseGitLog } from '../utils/git.js';
 
 export const searchCommits = async (jiraKey: string) => {
-  const { stdout } = await execa('git', ['log', '--oneline', `--grep=${jiraKey}`]);
+  const stdout = await getCommitsByGrep(jiraKey);
 
   if (!stdout) {
     logger.info(`No commits found for ${jiraKey}`);
     return;
   }
 
-  const commits = stdout.split('\n').map((line) => {
-    const [hash, ...msgParts] = line.trim().split(' ');
-    return {
-      hash,
-      message: msgParts.join(' '),
-    };
-  });
+  const commits = parseGitLog(stdout);
 
   const { selectedCommits } = await inquirer.prompt([
     {

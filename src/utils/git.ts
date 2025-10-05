@@ -82,3 +82,21 @@ export const inferJiraScopeFromBranch = (branch: string) => {
 
   return scopeMatch ? scopeMatch[0] : '';
 };
+
+export const getCommitsByGrep = async (jiraKey: string) => {
+  const { stdout } = await execa('git', ['log', '--oneline', '--reverse', `--grep=${jiraKey}`]);
+
+  return stdout;
+};
+
+export const parseGitLog = (stdout: string) =>
+  stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [hash, ...msgParts] = line.trim().split(' ');
+      return {
+        hash,
+        message: msgParts.join(' '),
+      };
+    });
