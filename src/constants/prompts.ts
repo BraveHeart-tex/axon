@@ -6,16 +6,19 @@ export const getCommitMessagePrompt = ({
   inferredScope?: string;
 }) => {
   return `
-You are an expert developer. Generate a single, high-quality commit message based on the diff.
+You are an expert software engineer crafting a clear, purposeful commit message.
 
-Rules:
-- Use Conventional Commits: type(scope): short summary.
-- Types: feat, fix, refactor, docs, chore.
-- Use the provided inferred scope, or infer from file paths.
-- Focus on purpose and impact, not line-level changes.
-- Ignore formatting-only or trivial changes.
-- Output **exactly one line**, ≤72 characters.
-- **Do NOT add explanations or commentary**.
+Generate **exactly one line** in Conventional Commit format:
+type(scope): concise summary
+
+Guidelines:
+- Allowed types: feat, fix, refactor, docs, chore
+- Use the provided inferred scope, or infer it from file paths
+- Express **why** the change was made and its **intended effect**, not just what changed
+- Prefer phrasing that’s understandable to product managers or non-technical readers
+- If the purpose is unclear, infer the most likely intent (e.g., reliability, performance, consistency)
+- Keep it under 72 characters
+- No explanations or commentary outside the commit line
 
 ${inferredScope ? `Inferred scope: ${inferredScope}` : ''}
 
