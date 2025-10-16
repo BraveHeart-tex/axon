@@ -55,23 +55,53 @@ function writeEnvFile(filePath: string, key: string, value: string) {
     content = fs.readFileSync(filePath, 'utf-8');
   }
 
-  const lines = content.split('\n').filter(Boolean);
-  let updated = false;
+  const lines = content.split('\n');
 
-  const newLines = lines.map((line) => {
-    const [existingKey] = line.split('=');
-    if (existingKey === key) {
-      updated = true;
-      return `${key}=${value}`;
+  const featureFlagStart = lines.findIndex((l) => l.trim() === '# Feature Flags');
+  const featureFlagEnd = lines.findIndex(
+    (l, i) => i > featureFlagStart && l.trim().startsWith('#'),
+  );
+
+  // Extract the section
+  const before = featureFlagStart >= 0 ? lines.slice(0, featureFlagStart + 1) : [];
+  const after =
+    featureFlagEnd >= 0 ? lines.slice(featureFlagEnd) : lines.slice(featureFlagStart + 1);
+
+  let featureFlags: string[] = [];
+  if (featureFlagStart >= 0) {
+    featureFlags = lines
+      .slice(featureFlagStart + 1, featureFlagEnd >= 0 ? featureFlagEnd : undefined)
+      .filter(Boolean);
+
+    // Update if key exists, otherwise add it
+    let updated = false;
+    featureFlags = featureFlags.map((line) => {
+      const [existingKey] = line.split('=');
+      if (existingKey === key) {
+        updated = true;
+        return `${key}=${value}`;
+      }
+      return line;
+    });
+
+    if (!updated) {
+      featureFlags.push(`${key}=${value}`);
     }
-    return line;
-  });
 
-  if (!updated) {
-    newLines.push(`${key}=${value}`);
+    // Sort alphabetically
+    featureFlags.sort((a, b) => {
+      const keyA = a.split('=')[0];
+      const keyB = b.split('=')[0];
+      return keyA.localeCompare(keyB);
+    });
+  } else {
+    // If no Feature Flags section, create it
+    before.push('# Feature Flags');
+    featureFlags = [`${key}=${value}`];
   }
 
-  fs.writeFileSync(filePath, newLines.join('\n') + '\n');
+  const newContent = [...before, ...featureFlags, ...after].join('\n');
+  fs.writeFileSync(filePath, newContent, 'utf-8');
   logger.info(`${key}=${value} written to ${filePath}`);
 }
 
@@ -84,6 +114,9 @@ function updateFeatureFlagHelper(flagName: string) {
 
   let content = fs.readFileSync(helperFile, 'utf-8');
 
+  // Strip NEXT_PUBLIC_ if it exists
+  const logicalName = flagName.replace(/^NEXT_PUBLIC_/, '');
+
   // 1️⃣ Update and sort the union type
   const unionRegex = /export type FeatureFlagName =([^;]+);/s;
   const match = content.match(unionRegex);
@@ -94,48 +127,56 @@ function updateFeatureFlagHelper(flagName: string) {
       .map((f) => f.trim().replace(/'/g, ''))
       .filter(Boolean);
 
-    if (!flags.includes(flagName)) {
-      flags.push(flagName);
+    if (!flags.includes(logicalName)) {
+      flags.push(logicalName);
     }
 
-    // Sort alphabetically
+    // Sort alphabetically for union
     flags = flags.sort((a, b) => a.localeCompare(b));
+
     const newUnion = flags.map((f) => `  | '${f}'`).join('\n');
     content = content.replace(unionRegex, `export type FeatureFlagName =\n${newUnion};`);
     logger.success('Updated FeatureFlagName union (sorted)');
   }
 
-  // 2️⃣ Update and sort the switch statement
+  // 2️⃣ Update switch statement (preserve order + indentation)
   const switchRegex = /(switch\s*\(featureFlagName\)\s*{)([\s\S]*?)(\n\s*default:)/;
   const switchMatch = content.match(switchRegex);
 
   if (switchMatch) {
-    const prefix = switchMatch[1]; // "switch(featureFlagName) {"
-    const casesBlock = switchMatch[2]; // existing cases
-    const suffix = switchMatch[3]; // "\n default:"
+    const prefix = switchMatch[1];
+    const casesBlock = switchMatch[2];
+    const suffix = switchMatch[3];
 
-    // Parse existing cases into array
     const caseRegex =
-      /case\s+'([^']+)':\s*\n\s*return\s+process\.env\.NEXT_PUBLIC_[^']+ === 'true';/g;
+      /(\s*case\s+'([^']+)':\s*\n\s*return\s+process\.env\.NEXT_PUBLIC_[^']+ === 'true';)/g;
+
     const existingCases: string[] = [];
     let m;
     while ((m = caseRegex.exec(casesBlock)) !== null) {
-      existingCases.push(m[0]);
+      existingCases.push(m[1]);
     }
 
-    // Add the new case if it doesn’t exist
-    const newCase = `case '${flagName}':\n  return process.env.NEXT_PUBLIC_${flagName} === 'true';`;
-    if (!existingCases.includes(newCase)) {
-      existingCases.push(newCase);
-    }
+    // Skip if already exists
+    if (casesBlock.includes(`case '${logicalName}':`)) {
+      logger.info(`Case for ${logicalName} already exists.`);
+    } else {
+      // Detect indentation based on existing cases (default 4 spaces)
+      const indent = (existingCases[0]?.match(/^\s*/) || ['    '])[0];
 
-    const newCasesBlock = '\n' + existingCases.join('\n') + '\n';
-    content = content.replace(switchRegex, `${prefix}${newCasesBlock}${suffix}`);
-    logger.success('Updated isFeatureFlagEnabled switch (sorted)');
+      // ✅ No blank line between case and return
+      const newCase = `${indent}case '${logicalName}':\n${indent}  return process.env.NEXT_PUBLIC_${logicalName} === 'true';`;
+
+      // Trim trailing spaces/newlines before inserting
+      const newCasesBlock = casesBlock.trimEnd() + '\n' + newCase;
+      content = content.replace(switchRegex, `${prefix}${newCasesBlock}${suffix}`);
+      logger.success('Added new feature flag case (preserving order and indentation)');
+    }
   }
 
   fs.writeFileSync(helperFile, content, 'utf-8');
 }
+
 function updateGlobalDTS(flagName: string) {
   const globalFile = path.resolve(process.cwd(), 'global.d.ts');
   if (!fs.existsSync(globalFile)) {
@@ -145,9 +186,6 @@ function updateGlobalDTS(flagName: string) {
 
   let content = fs.readFileSync(globalFile, 'utf-8');
 
-  const envVarName = `NEXT_PUBLIC_${flagName}`;
-
-  // Regex to find the Feature Flags block
   const featureFlagRegex = /(\/\/ Feature Flags\s*\n)([\s\S]*?)(\n\s*\/\/ Public API Routes)/;
   const match = content.match(featureFlagRegex);
 
@@ -160,23 +198,21 @@ function updateGlobalDTS(flagName: string) {
   const block = match[2];
   const suffix = match[3];
 
-  // Check if variable already exists
-  if (block.includes(envVarName)) {
-    logger.warn(`${envVarName} already exists in global.d.ts`);
+  if (block.includes(flagName)) {
+    logger.warn(`${flagName} already exists in global.d.ts`);
     return;
   }
 
-  // Add new variable and sort alphabetically
   const lines = block
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
-  lines.push(`${envVarName}: string;`);
+  lines.push(`${flagName}: string;`);
   lines.sort((a, b) => a.localeCompare(b));
 
-  const newBlock = '\n' + lines.map((l) => `    ${l}`).join('\n') + '\n';
+  const newBlock = lines.map((l) => `    ${l}`).join('\n');
   content = content.replace(featureFlagRegex, `${prefix}${newBlock}${suffix}`);
 
   fs.writeFileSync(globalFile, content, 'utf-8');
-  logger.success(`Added ${envVarName} to global.d.ts`);
+  logger.success(`Added ${flagName} to global.d.ts`);
 }
