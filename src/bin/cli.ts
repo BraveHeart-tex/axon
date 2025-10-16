@@ -6,6 +6,7 @@ import { configureApiKey } from '../commands/config.js';
 import { generateAICommit } from '../commands/commitAi.js';
 import { reviewAi } from '../commands/reviewAi.js';
 import { searchCommits } from '../commands/searchCommits.js';
+import { addFeatureFlag } from '../commands/featureFlag.js';
 
 const program = new Command();
 
@@ -61,6 +62,13 @@ program
   .description('Manage API keys securely')
   .action(async () => {
     await configureApiKey();
+  });
+
+program
+  .command('feature-flag')
+  .description('Add a feature flag')
+  .action(async () => {
+    await addFeatureFlag();
   });
 
 program.parse(process.argv);
