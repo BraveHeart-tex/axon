@@ -5,6 +5,7 @@ import { writeEnvFile } from '../utils/featureFlag/writeEnvFile.js';
 import { updateFeatureFlagHelper } from '../utils/featureFlag/updateFeatureFlagHelper.js';
 import { updateGlobalDts } from '../utils/featureFlag/updateGlobalDts.js';
 import { updateGitlabCI } from '../utils/featureFlag/updateGitlabCi.js';
+import { updateDockerfileFeatureFlag } from '../utils/featureFlag/updateDockerFileFeatureFlag.js';
 
 export const addFeatureFlag = async () => {
   const questions: DistinctQuestion[] = [
@@ -48,4 +49,5 @@ export const addFeatureFlag = async () => {
   updateFeatureFlagHelper(answers.name);
   updateGlobalDts(answers.name);
   updateGitlabCI(answers.name, answers.staging, prodValue);
+  updateDockerfileFeatureFlag(answers.name);
 };
