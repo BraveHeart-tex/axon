@@ -39,10 +39,8 @@ export const addFeatureFlag = async () => {
   const stagingFile = path.resolve(process.cwd(), '.env.development.staging');
   const prodFile = path.resolve(process.cwd(), '.env.development.production');
 
-  // Write staging variable
   writeEnvFile(stagingFile, answers.name, answers.staging);
 
-  // For preprod and production, merge into single env file
   const prodValue = answers.production === 'true' || answers.preprod === 'true' ? 'true' : 'false';
   writeEnvFile(prodFile, answers.name, prodValue);
 
