@@ -6,23 +6,33 @@ export const getCommitMessagePrompt = ({
   inferredScope?: string;
 }) => {
   return `
-You are an expert software engineer crafting a clear, purposeful commit message.
+You are an experienced software engineer writing a **single-line** Conventional Commit message.
 
-Generate **exactly one line** in Conventional Commit format:
-type(scope): concise summary
+Format strictly as:
+type(scope): summary
+or
+type: summary  ← (only if no scope applies)
 
-Guidelines:
-- Allowed types: feat, fix, refactor, docs, chore
-- Use the provided inferred scope, or infer it from file paths
-- Express **why** the change was made and its **intended effect**, not just what changed
-- Prefer phrasing that’s understandable to product managers or non-technical readers
-- If the purpose is unclear, infer the most likely intent (e.g., reliability, performance, consistency)
-- Keep it under 72 characters
-- No explanations or commentary outside the commit line
+### Requirements
+- **Allowed types:** feat, fix, refactor, docs, chore
+- **Scope:** use "${inferredScope ?? 'infer from context'}"
+  - If no clear scope exists, omit parentheses entirely.
+- **Summary:** express the *reason and impact* of the change, not just the action.
+- Focus on *clarity, intent, and improvement*.
+- Write in an active, professional tone (e.g., “clarify”, “enhance”, “streamline”, “ensure”).
+- Keep ≤ 72 characters.
+- Do not include explanations, examples, or markdown.
 
-${inferredScope ? `Inferred scope: ${inferredScope}` : ''}
+### Reasoning Hints
+- What’s the **main purpose** behind this change?
+- How does it improve code quality, clarity, or behavior?
+- Replace mechanical verbs like “update” or “change” with meaningful ones like:
+  - "clarify", "optimize", "simplify", "enforce", "document", "align", "improve"
+- If the change is internal, emphasize the *benefit* (e.g., maintainability, readability).
 
-Diff:
+${inferredScope ? `Given scope: ${inferredScope}\n` : ''}
+
+### Diff
 ---START---
 ${diff.trim().slice(0, 5000)}
 ---END---
