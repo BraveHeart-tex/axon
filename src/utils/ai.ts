@@ -1,5 +1,5 @@
-import { streamText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+import { streamText } from 'ai';
 
 export const createAiModel = (apiKey: string) => {
   const groq = createGroq({ apiKey });

@@ -1,5 +1,6 @@
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
+
 import { logger } from '../logger.js';
 
 export const updateGlobalDts = (flagName: string) => {

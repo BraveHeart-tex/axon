@@ -1,12 +1,14 @@
-import { getApiKey } from '../utils/config.js';
-import { CREDENTIAL_KEYS } from '../constants/config.js';
-import { logger } from '../utils/logger.js';
-import { getStagedChangesDiff } from '../utils/git.js';
-import ora, { Ora } from 'ora';
-import { streamAiResponse } from '../utils/ai.js';
 import fs from 'node:fs';
 import path from 'node:path';
+
+import ora, { Ora } from 'ora';
+
+import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { getReviewPrompt } from '../constants/prompts.js';
+import { streamAiResponse } from '../utils/ai.js';
+import { getApiKey } from '../utils/config.js';
+import { getStagedChangesDiff } from '../utils/git.js';
+import { logger } from '../utils/logger.js';
 
 export const reviewAi = async (diffContent: string) => {
   let spinner: Ora | null = null;

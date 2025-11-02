@@ -1,4 +1,5 @@
 import fs from 'fs';
+
 import { logger } from '../logger.js';
 
 export const writeEnvFile = (filePath: string, key: string, value: string) => {

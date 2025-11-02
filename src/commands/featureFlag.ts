@@ -1,11 +1,11 @@
 import inquirer, { DistinctQuestion } from 'inquirer';
-
 import path from 'path';
-import { writeEnvFile } from '../utils/featureFlag/writeEnvFile.js';
-import { updateFeatureFlagHelper } from '../utils/featureFlag/updateFeatureFlagHelper.js';
-import { updateGlobalDts } from '../utils/featureFlag/updateGlobalDts.js';
-import { updateGitlabCI } from '../utils/featureFlag/updateGitlabCi.js';
+
 import { updateDockerfileFeatureFlag } from '../utils/featureFlag/updateDockerFileFeatureFlag.js';
+import { updateFeatureFlagHelper } from '../utils/featureFlag/updateFeatureFlagHelper.js';
+import { updateGitlabCI } from '../utils/featureFlag/updateGitlabCi.js';
+import { updateGlobalDts } from '../utils/featureFlag/updateGlobalDts.js';
+import { writeEnvFile } from '../utils/featureFlag/writeEnvFile.js';
 
 export const addFeatureFlag = async () => {
   const questions: DistinctQuestion[] = [

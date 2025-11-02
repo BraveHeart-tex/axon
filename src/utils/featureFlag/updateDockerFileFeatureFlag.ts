@@ -1,5 +1,5 @@
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 
 const FROM_BUILDER = /^FROM\s+base\s+AS\s+builder/i;
 const COPY_DOT_REGEX = /^\s*COPY\b.*\.\s+\.\s*$/i;

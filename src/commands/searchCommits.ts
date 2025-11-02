@@ -1,6 +1,7 @@
-import { logger } from '../utils/logger.js';
 import inquirer from 'inquirer';
+
 import { getCommitsByGrep, parseGitLog } from '../utils/git.js';
+import { logger } from '../utils/logger.js';
 
 interface SearchCommitsAnswers {
   selectedCommits: string[];

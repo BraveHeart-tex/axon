@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
+
 import { logger } from '../logger.js';
 
 export const updateGitlabCI = (flagName: string, stagingValue: string, productionValue: string) => {

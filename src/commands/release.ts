@@ -1,4 +1,5 @@
 import inquirer from 'inquirer';
+
 import { JIRA_REGEX } from '../constants/jira.js';
 import {
   checkoutBranch,

@@ -1,4 +1,5 @@
 import { Project, SourceFile, SwitchStatement, SyntaxKind } from 'ts-morph';
+
 import { logger } from '../logger.js';
 
 export const updateFeatureFlagHelper = (flagName: string) => {

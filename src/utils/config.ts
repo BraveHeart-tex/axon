@@ -1,6 +1,7 @@
 import keytar from 'keytar';
-import { addKeyName, listKeyNames, removeKeyName } from './indexStore.js';
+
 import { CredentialKey } from '../constants/config.js';
+import { addKeyName, listKeyNames, removeKeyName } from './indexStore.js';
 
 const SERVICE = 'axon-cli';
 

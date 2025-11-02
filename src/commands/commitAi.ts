@@ -1,13 +1,14 @@
+import ora, { Ora } from 'ora';
+
+import { CREDENTIAL_KEYS } from '../constants/config.js';
+import { getCommitMessagePrompt } from '../constants/prompts.js';
+import { streamAiResponse } from '../utils/ai.js';
+import { getApiKey } from '../utils/config.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
 } from '../utils/git.js';
-import { getApiKey } from '../utils/config.js';
-import { CREDENTIAL_KEYS } from '../constants/config.js';
-import { streamAiResponse } from '../utils/ai.js';
-import ora, { Ora } from 'ora';
-import { getCommitMessagePrompt } from '../constants/prompts.js';
 import { logger } from '../utils/logger.js';
 
 export const generateAICommit = async () => {

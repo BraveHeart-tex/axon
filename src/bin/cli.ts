@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { createFeatureBranch } from '../commands/feature.js';
-import { createReleaseBranch } from '../commands/release.js';
-import { configureApiKey } from '../commands/config.js';
+
 import { generateAICommit } from '../commands/commitAi.js';
+import { configureApiKey } from '../commands/config.js';
+import { createFeatureBranch } from '../commands/feature.js';
+import { addFeatureFlag } from '../commands/featureFlag.js';
+import { createReleaseBranch } from '../commands/release.js';
 import { reviewAi } from '../commands/reviewAi.js';
 import { searchCommits } from '../commands/searchCommits.js';
-import { addFeatureFlag } from '../commands/featureFlag.js';
 
 const program = new Command();
 

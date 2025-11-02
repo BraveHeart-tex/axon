@@ -1,6 +1,7 @@
 import inquirer from 'inquirer';
-import { setApiKey, getApiKey, deleteApiKey, listApiKeys } from '../utils/config.js';
+
 import { CREDENTIAL_KEYS, CredentialKey } from '../constants/config.js';
+import { deleteApiKey, getApiKey, listApiKeys, setApiKey } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
 
 export const configureApiKey = async () => {
