@@ -1,9 +1,10 @@
+import inquirer from 'inquirer';
 import ora, { Ora } from 'ora';
 
 import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { getCommitMessagePrompt } from '../constants/prompts.js';
 import { streamAiResponse } from '../utils/ai.js';
-import { getApiKey } from '../utils/config.js';
+import { getApiKey, setApiKey } from '../utils/config.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
@@ -13,12 +14,23 @@ import { logger } from '../utils/logger.js';
 
 export const generateAICommit = async () => {
   let spinner: Ora | null = null;
+
   try {
-    const aiApiKey = await getApiKey(CREDENTIAL_KEYS.AI);
-    // TODO: Trigger a set-command here to set the ai-key
+    let aiApiKey = await getApiKey(CREDENTIAL_KEYS.AI);
     if (!aiApiKey) {
-      logger.error('Groq API key is required to generate a commit message.');
-      return;
+      const { key } = await inquirer.prompt([
+        {
+          type: 'password',
+          name: 'key',
+          message: 'Enter your Groq API key:',
+          mask: '*',
+          validate: (input) => (input.trim().length > 0 ? true : 'API key cannot be empty.'),
+        },
+      ]);
+
+      await setApiKey(CREDENTIAL_KEYS.AI, key);
+      aiApiKey = key.trim();
+      logger.info('AI API key set successfully.');
     }
 
     const stagedChangesDiff = await getStagedChangesDiff();
@@ -34,17 +46,14 @@ export const generateAICommit = async () => {
     const inferredScope = inferJiraScopeFromBranch(branchName);
 
     await streamAiResponse({
-      apiKey: aiApiKey,
+      apiKey: aiApiKey as string,
       prompt: getCommitMessagePrompt({ diff: stagedChangesDiff, inferredScope }),
       onChunk: (chunk) => {
         fullMessage += chunk;
       },
     });
 
-    fullMessage = fullMessage
-      .replace(/\s+/g, ' ') // merge extra whitespace
-      .split('\n')[0] // take only the first line
-      .trim();
+    fullMessage = fullMessage.replace(/\s+/g, ' ').split('\n')[0].trim();
 
     spinner.stop();
     logger.info('\n✨ Suggested commit message:\n');
