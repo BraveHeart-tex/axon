@@ -83,6 +83,11 @@ export const inferJiraScopeFromBranch = (branch: string) => {
   return scopeMatch ? scopeMatch[0] : '';
 };
 
+export const inferScopeTypeFromBranch = (branch: string) => {
+  const [scopeType] = branch.split('/');
+  return scopeType;
+};
+
 export const getCommitsByGrep = async (jiraKey: string) => {
   const { stdout } = await execa('git', ['log', '--oneline', '--reverse', `--grep=${jiraKey}`]);
 

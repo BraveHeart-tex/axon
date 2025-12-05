@@ -9,6 +9,7 @@ import {
   getCurrentBranchName,
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
+  inferScopeTypeFromBranch,
 } from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 
@@ -44,10 +45,11 @@ export const generateAICommit = async () => {
     let fullMessage = '';
     const branchName = await getCurrentBranchName();
     const inferredScope = inferJiraScopeFromBranch(branchName);
+    const inferredScopeType = inferScopeTypeFromBranch(branchName);
 
     await streamAiResponse({
       apiKey: aiApiKey as string,
-      prompt: getCommitMessagePrompt({ diff: stagedChangesDiff, inferredScope }),
+      prompt: getCommitMessagePrompt({ diff: stagedChangesDiff, inferredScope, inferredScopeType }),
       onChunk: (chunk) => {
         fullMessage += chunk;
       },

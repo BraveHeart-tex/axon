@@ -1,9 +1,11 @@
 export const getCommitMessagePrompt = ({
   diff,
   inferredScope,
+  inferredScopeType,
 }: {
   diff: string;
   inferredScope?: string;
+  inferredScopeType?: string;
 }) => {
   return `
 You are an experienced software engineer writing a **single-line** Conventional Commit message.
@@ -17,6 +19,8 @@ type: summary  ← (only if no scope applies)
 - **Allowed types:** feat, fix, refactor, docs, chore
 - **Scope:** use "${inferredScope ?? 'infer from context'}"
   - If no clear scope exists, omit parentheses entirely.
+- **Scope Type:** use "${inferredScopeType ?? 'infer from context'}"
+  - If no clear scope type exists, omit parentheses entirely.
 - **Summary:** express the *reason and impact* of the change, not just the action.
 - Focus on *clarity, intent, and improvement*.
 - Write in an active, professional tone (e.g., “clarify”, “enhance”, “streamline”, “ensure”).
