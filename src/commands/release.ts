@@ -1,30 +1,16 @@
 import inquirer from 'inquirer';
 
-import { JIRA_REGEX } from '../constants/jira.js';
 import {
   checkoutBranch,
   cherryPickCommit,
   createBranch,
   getRecentCommitsForDevelop,
+  getScopeFromCommitMessage,
   pullBranch,
 } from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 
 export const createReleaseBranch = async () => {
-  const { jiraCode } = await inquirer.prompt<{ jiraCode: string }>([
-    {
-      type: 'input',
-      name: 'jiraCode',
-      message: 'Enter JIRA code (e.g., JIRA-123):',
-      validate: (input: string) =>
-        JIRA_REGEX.test(input)
-          ? true
-          : '❌ Invalid JIRA code. Must match FE|ORD|DIS|PE|PRD|MEM|MOD-[0-9]+',
-    },
-  ]);
-
-  const branch = `release/${jiraCode}`;
-
   const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
     {
       type: 'list',
@@ -38,6 +24,8 @@ export const createReleaseBranch = async () => {
   ]);
 
   let commits: string[] = [];
+  let branchTitle = '';
+  const branchPrefix = 'release';
 
   if (pickMethod === 'manual') {
     const { commitHashes } = await inquirer.prompt<{ commitHashes: string }>([
@@ -50,6 +38,18 @@ export const createReleaseBranch = async () => {
     ]);
 
     commits = commitHashes.split(/\s+/);
+
+    const { title } = await inquirer.prompt<{ title: string }>([
+      {
+        type: 'input',
+        name: 'title',
+        message: `Enter the release branch title ${branchPrefix}/YOUR_INPUT`,
+        transformer: (input) => `${branchPrefix}/${input}`,
+        validate: (input) => input.trim() !== '' || '❌ Title is required.',
+      },
+    ]);
+
+    branchTitle = title;
   } else {
     logger.info('🔄 Checking out develop and pulling latest changes...');
     await checkoutBranch('develop');
@@ -67,7 +67,23 @@ export const createReleaseBranch = async () => {
       },
     ]);
 
-    commits = selectedCommits;
+    if (selectedCommits.length > 1) {
+      const { title } = await inquirer.prompt<{ title: string }>([
+        {
+          type: 'input',
+          name: 'title',
+          message: `Enter the release branch title ${branchPrefix}/YOUR_INPUT`,
+          transformer: (input) => `${branchPrefix}/${input}`,
+          validate: (input) => input.trim() !== '' || '❌ Title is required.',
+        },
+      ]);
+
+      branchTitle = title;
+    } else {
+      branchTitle = `${branchPrefix}/${getScopeFromCommitMessage(selectedCommits[0])}`;
+    }
+
+    commits = selectedCommits.map((commit) => commit.split(':')[0]);
   }
 
   try {
@@ -75,8 +91,8 @@ export const createReleaseBranch = async () => {
     await checkoutBranch('main');
     await pullBranch('main');
 
-    logger.info(`🌿 Creating release branch: ${branch}`);
-    await createBranch(branch);
+    logger.info(`🌿 Creating release branch: ${branchTitle}`);
+    await createBranch(branchTitle);
 
     logger.info('🍒 Cherry-picking commits:');
     for (const commit of commits) {
@@ -89,7 +105,7 @@ export const createReleaseBranch = async () => {
       }
     }
 
-    logger.info(`✅ Release branch ${branch} created and commits cherry-picked.`);
+    logger.info(`✅ Release branch ${branchTitle} created and commits cherry-picked.`);
   } catch (err) {
     logger.error(`Git operation failed: ${(err as Error).message}`);
   }

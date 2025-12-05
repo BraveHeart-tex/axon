@@ -60,7 +60,7 @@ export const getRecentCommitsForDevelop = async (
     const message = messageParts.join('|');
     return {
       name: `${hash} | ${author} | ${date} | ${message}`,
-      value: hash,
+      value: `${hash}:${message}`,
     };
   });
 };
@@ -105,3 +105,9 @@ export const parseGitLog = (stdout: string) =>
         message: msgParts.join(' '),
       };
     });
+
+export const getScopeFromCommitMessage = (commitMessage: string): string => {
+  const JIRA_REGEX = /\b(?:FE|ORD|DIS|PE|PRD|MEM|MOD)-\d+\b/;
+  const match = commitMessage.match(JIRA_REGEX);
+  return match?.[0] ?? '';
+};
