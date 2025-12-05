@@ -84,6 +84,7 @@ export const inferJiraScopeFromBranch = (branch: string) => {
 };
 
 export const inferScopeTypeFromBranch = (branch: string) => {
+  if (!branch.includes('/')) return '';
   const [scopeType] = branch.split('/');
   return scopeType;
 };
