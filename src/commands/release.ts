@@ -51,6 +51,10 @@ export const createReleaseBranch = async () => {
 
     commits = commitHashes.split(/\s+/);
   } else {
+    logger.info('🔄 Checking out develop and pulling latest changes...');
+    await checkoutBranch('develop');
+    await pullBranch('develop');
+
     const recentCommits = await getRecentCommitsForDevelop();
 
     const { selectedCommits } = await inquirer.prompt<{ selectedCommits: string[] }>([
