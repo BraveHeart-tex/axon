@@ -73,3 +73,22 @@ program
   });
 
 program.parse(process.argv);
+
+let isInterrupting = false;
+
+process.on('SIGINT', () => {
+  if (isInterrupting) return;
+  isInterrupting = true;
+
+  process.stdout.write('\n');
+  process.stdout.write('Interrupted. Exiting…\n');
+
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+  if (err?.constructor?.name === 'ExitPromptError') {
+    process.stdout.write('\nPrompt canceled. Exiting...\n');
+    process.exit(1);
+  }
+});
