@@ -58,8 +58,8 @@ export const generateAICommit = async () => {
     fullMessage = fullMessage.replace(/\s+/g, ' ').split('\n')[0].trim();
 
     spinner.stop();
-    logger.info('\n✨ Suggested commit message:\n');
-    logger.info(fullMessage);
+    logger.info('\n✨ Suggested commit message:\n', false);
+    logger.info(fullMessage, false);
   } catch (error) {
     if (spinner) {
       spinner.fail(String(error));

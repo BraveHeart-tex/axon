@@ -5,7 +5,7 @@ import { generateAICommit } from '../commands/commitAi.js';
 import { configureApiKey } from '../commands/config.js';
 import { createFeatureBranch } from '../commands/feature.js';
 import { addFeatureFlag } from '../commands/featureFlag.js';
-import { createReleaseBranch } from '../commands/release.js';
+import { createReleaseBranch, ReleaseOptions } from '../commands/release.js';
 import { reviewAi } from '../commands/reviewAi.js';
 import { searchCommits } from '../commands/searchCommits.js';
 
@@ -24,8 +24,9 @@ program
   .command('release')
   .description('Create a release branch')
   .option('--only-unmerged', 'Only show unmerged commits')
-  .action(async (options) => {
-    await createReleaseBranch(options.onlyUnmerged);
+  .option('--author <author>', 'Filter by author')
+  .action(async (options: ReleaseOptions) => {
+    await createReleaseBranch(options);
   });
 
 program

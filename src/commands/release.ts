@@ -4,6 +4,7 @@ import {
   checkoutBranch,
   cherryPickCommit,
   createBranch,
+  fetchRemote,
   formatCommitChoice,
   getRecentCommitsForDevelop,
   getScopeFromCommitMessage,
@@ -11,7 +12,12 @@ import {
 } from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 
-export const createReleaseBranch = async (onlyUnmerged = false) => {
+export interface ReleaseOptions {
+  onlyUnmerged: boolean;
+  author: string;
+}
+
+export const createReleaseBranch = async (options: ReleaseOptions) => {
   const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
     {
       type: 'list',
@@ -53,17 +59,26 @@ export const createReleaseBranch = async (onlyUnmerged = false) => {
     branchTitle = title;
   } else {
     logger.info('Checking out develop and pulling latest changes...');
-    if (onlyUnmerged) {
+    if (options.onlyUnmerged) {
       logger.warn('Only unmerged commits will be shown.');
     }
 
     await checkoutBranch('develop');
     await pullBranch('develop');
 
-    const recentCommits = await getRecentCommitsForDevelop(50, onlyUnmerged);
+    if (options.onlyUnmerged) {
+      logger.info('Fetching main branch since only unmerged commits are requested...');
+      await fetchRemote('origin');
+    }
+
+    const recentCommits = await getRecentCommitsForDevelop({
+      limit: 50,
+      onlyUnmerged: options.onlyUnmerged,
+      author: options.author,
+    });
 
     if (recentCommits.length === 0) {
-      logger.warn(`No ${onlyUnmerged ? 'unmerged' : ''} commits found on develop branch.`);
+      logger.warn(`No ${options.onlyUnmerged ? 'unmerged' : ''} commits found on develop branch.`);
       return;
     }
 

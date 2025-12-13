@@ -52,10 +52,15 @@ export interface RecentCommit {
   message: string;
 }
 
-export const getRecentCommitsForDevelop = async (
-  limit: number = 50,
-  onlyUnmerged: boolean = false,
-): Promise<RecentCommit[]> => {
+export const getRecentCommitsForDevelop = async ({
+  limit = 50,
+  onlyUnmerged = false,
+  author = '',
+}: {
+  limit: number;
+  onlyUnmerged: boolean;
+  author: string;
+}): Promise<RecentCommit[]> => {
   const { stdout } = await execa('git', [
     'log',
     onlyUnmerged ? 'main..develop' : 'develop',
@@ -64,6 +69,7 @@ export const getRecentCommitsForDevelop = async (
     '-n',
     String(limit),
     'develop',
+    author ? `--author=${author}` : '',
   ]);
 
   if (stdout === '') {
@@ -103,6 +109,10 @@ export const cherryPickCommit = async (commitHash: string) => {
 export const getCurrentBranchName = async () => {
   const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
   return stdout;
+};
+
+export const fetchRemote = async (branchName: string) => {
+  await execa('git', ['fetch', branchName], { stdio: 'inherit' });
 };
 
 export const inferJiraScopeFromBranch = (branch: string) => {

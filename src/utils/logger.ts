@@ -8,8 +8,9 @@ const color = {
 };
 
 export const logger = {
-  info: (msg: string) => console.log(color.info(`ℹ️  ${msg}`)),
-  success: (msg: string) => console.log(color.success(`✅  ${msg}`)),
-  warn: (msg: string) => console.warn(color.warn(`⚠️  ${msg}`)),
-  error: (msg: string) => console.error(color.error(`❌  ${msg}`)),
+  info: (msg: string, showLabel = true) =>
+    console.log(color.info(`${showLabel ? '[INFO]' : ''}  ${msg}`)),
+  success: (msg: string) => console.log(color.success(`[SUCCESS]  ${msg}`)),
+  warn: (msg: string) => console.warn(color.warn(`[WARN]  ${msg}`)),
+  error: (msg: string) => console.error(color.error(`[ERROR]  ${msg}`)),
 };
