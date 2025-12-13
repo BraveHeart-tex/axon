@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { execa } from 'execa';
 
 export const checkoutBranch = async (branch: string) => {
@@ -44,25 +45,55 @@ export const getStagedChangesDiff = async (): Promise<string> => {
   return stdout;
 };
 
+export interface RecentCommit {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+}
+
 export const getRecentCommitsForDevelop = async (
   limit: number = 50,
-): Promise<{ name: string; value: string }[]> => {
+  onlyUnmerged: boolean = false,
+): Promise<RecentCommit[]> => {
   const { stdout } = await execa('git', [
     'log',
+    onlyUnmerged ? 'main..develop' : 'develop',
     '--pretty=format:%h|%an|%ad|%s',
+    '--date=relative',
     '-n',
     String(limit),
     'develop',
   ]);
 
+  if (stdout === '') {
+    return [];
+  }
+
   return stdout.split('\n').map((line) => {
     const [hash, author, date, ...messageParts] = line.split('|');
-    const message = messageParts.join('|');
+
     return {
-      name: `${hash} | ${author} | ${date} | ${message}`,
-      value: `${hash}:${message}`,
+      hash,
+      author,
+      date,
+      message: messageParts.join('|'),
     };
   });
+};
+
+export const formatCommitChoice = (commit: RecentCommit) => {
+  const hash = chalk.yellow(commit.hash);
+  const scope = chalk.green(`[${getScopeFromCommitMessage(commit.message)}]`);
+  const message = commit.message.length > 100 ? `${commit.message.slice(0, 100)}…` : commit.message;
+
+  const meta = chalk.gray(`${commit.author} • ${commit.date}`);
+
+  return {
+    value: commit.hash,
+    short: commit.hash,
+    name: `${hash}  ${scope} ${message}\n     ${meta}`,
+  };
 };
 
 export const cherryPickCommit = async (commitHash: string) => {
@@ -110,5 +141,10 @@ export const parseGitLog = (stdout: string) =>
 export const getScopeFromCommitMessage = (commitMessage: string): string => {
   const JIRA_REGEX = /\b(?:FE|ORD|DIS|PE|PRD|MEM|MOD)-\d+\b/;
   const match = commitMessage.match(JIRA_REGEX);
-  return match?.[0] ?? '';
+  const jiraScope = match?.[0] ?? '';
+
+  if (jiraScope) return jiraScope;
+
+  const fallbackScope = commitMessage.split(':')[0]?.trim() ?? '';
+  return fallbackScope;
 };

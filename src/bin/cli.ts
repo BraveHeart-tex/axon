@@ -23,8 +23,9 @@ program
 program
   .command('release')
   .description('Create a release branch')
-  .action(async () => {
-    await createReleaseBranch();
+  .option('--only-unmerged', 'Only show unmerged commits')
+  .action(async (options) => {
+    await createReleaseBranch(options.onlyUnmerged);
   });
 
 program

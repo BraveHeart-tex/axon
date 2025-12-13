@@ -4,13 +4,14 @@ import {
   checkoutBranch,
   cherryPickCommit,
   createBranch,
+  formatCommitChoice,
   getRecentCommitsForDevelop,
   getScopeFromCommitMessage,
   pullBranch,
 } from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 
-export const createReleaseBranch = async () => {
+export const createReleaseBranch = async (onlyUnmerged = false) => {
   const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
     {
       type: 'list',
@@ -51,18 +52,28 @@ export const createReleaseBranch = async () => {
 
     branchTitle = title;
   } else {
-    logger.info('🔄 Checking out develop and pulling latest changes...');
+    logger.info('Checking out develop and pulling latest changes...');
+    if (onlyUnmerged) {
+      logger.warn('Only unmerged commits will be shown.');
+    }
+
     await checkoutBranch('develop');
     await pullBranch('develop');
 
-    const recentCommits = await getRecentCommitsForDevelop();
+    const recentCommits = await getRecentCommitsForDevelop(50, onlyUnmerged);
+
+    if (recentCommits.length === 0) {
+      logger.warn(`No ${onlyUnmerged ? 'unmerged' : ''} commits found on develop branch.`);
+      return;
+    }
 
     const { selectedCommits } = await inquirer.prompt<{ selectedCommits: string[] }>([
       {
         type: 'checkbox',
         name: 'selectedCommits',
         message: 'Select commits to cherry-pick:',
-        choices: recentCommits,
+        pageSize: 10,
+        choices: recentCommits.map(formatCommitChoice),
         validate: (input) => input.length > 0 || '❌ Select at least one commit.',
       },
     ]);
@@ -87,11 +98,11 @@ export const createReleaseBranch = async () => {
   }
 
   try {
-    logger.info('🔄 Checking out main and pulling latest changes...');
+    logger.info('Checking out main and pulling latest changes...');
     await checkoutBranch('main');
     await pullBranch('main');
 
-    logger.info(`🌿 Creating release branch: ${branchTitle}`);
+    logger.info(`Creating release branch: ${branchTitle}`);
     await createBranch(branchTitle);
 
     logger.info('🍒 Cherry-picking commits:');
