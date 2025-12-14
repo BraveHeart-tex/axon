@@ -1,5 +1,8 @@
-import chalk from 'chalk';
 import { execa } from 'execa';
+
+import { JIRA_REGEX } from '../jira/jira.constants.js';
+import { formatCommits } from './git.formatter.js';
+import { RecentCommit } from './git.types.js';
 
 export const checkoutBranch = async (branch: string) => {
   try {
@@ -45,13 +48,6 @@ export const getStagedChangesDiff = async (): Promise<string> => {
   return stdout;
 };
 
-export interface RecentCommit {
-  hash: string;
-  author: string;
-  date: string;
-  message: string;
-}
-
 export const getRecentCommitsForDevelop = async ({
   limit = 50,
   onlyUnmerged = false,
@@ -75,30 +71,7 @@ export const getRecentCommitsForDevelop = async ({
     return [];
   }
 
-  return stdout.split('\n').map((line) => {
-    const [hash, author, date, ...messageParts] = line.split('|');
-
-    return {
-      hash,
-      author,
-      date,
-      message: messageParts.join('|'),
-    };
-  });
-};
-
-export const formatCommitChoice = (commit: RecentCommit) => {
-  const hash = chalk.yellow(commit.hash);
-  const scope = chalk.green(`[${getScopeFromCommitMessage(commit.message)}]`);
-  const message = commit.message.length > 100 ? `${commit.message.slice(0, 100)}…` : commit.message;
-
-  const meta = chalk.gray(`${commit.author} • ${commit.date}`);
-
-  return {
-    value: commit.hash,
-    short: commit.hash,
-    name: `${hash}  ${scope} ${message}\n     ${meta}`,
-  };
+  return formatCommits(stdout.split('\n'));
 };
 
 export const cherryPickCommit = async (commitHash: string) =>
@@ -114,8 +87,6 @@ export const fetchRemote = async (branchName: string) => {
 };
 
 export const inferJiraScopeFromBranch = (branch: string) => {
-  const JIRA_REGEX = /\b(?:FE|ORD|DIS|PE|PRD|MEM|MOD)-\d+\b/;
-
   const scopeMatch = branch.match(JIRA_REGEX);
   if (!scopeMatch) return '';
 
@@ -134,20 +105,7 @@ export const getCommitsByGrep = async (jiraKey: string) => {
   return stdout;
 };
 
-export const parseGitLog = (stdout: string) =>
-  stdout
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const [hash, ...msgParts] = line.trim().split(' ');
-      return {
-        hash,
-        message: msgParts.join(' '),
-      };
-    });
-
 export const getScopeFromCommitMessage = (commitMessage: string): string => {
-  const JIRA_REGEX = /\b(?:FE|ORD|DIS|PE|PRD|MEM|MOD)-\d+\b/;
   const match = commitMessage.match(JIRA_REGEX);
   const jiraScope = match?.[0] ?? '';
 

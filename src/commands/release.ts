@@ -1,15 +1,15 @@
 import inquirer from 'inquirer';
 
+import { formatCommitChoice } from '../domains/git/git.formatter.js';
 import {
   checkoutBranch,
   cherryPickCommit,
   createBranch,
   fetchRemote,
-  formatCommitChoice,
   getRecentCommitsForDevelop,
   getScopeFromCommitMessage,
   pullBranch,
-} from '../utils/git.js';
+} from '../domains/git/git.service.js';
 import { logger } from '../utils/logger.js';
 
 export interface ReleaseOptions {
@@ -131,7 +131,7 @@ export const createReleaseBranch = async (options: ReleaseOptions) => {
       }
     }
 
-    logger.info(`✅ Release branch ${branchTitle} created and commits cherry-picked.`);
+    logger.info(`Release branch ${branchTitle} created and commits cherry-picked.`);
   } catch (err) {
     logger.error(`Git operation failed: ${(err as Error).message}`);
   }

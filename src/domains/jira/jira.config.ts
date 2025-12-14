@@ -1,10 +1,9 @@
 import inquirer from 'inquirer';
 
-import { CREDENTIAL_KEYS } from '../constants/config.js';
-import { JIRA_CLOUD_URL_REGEX, JiraIssue, JiraIssuesResponse } from '../constants/jira.js';
-import { readConfig, writeConfig } from '../store/configStrore.js';
-import { logger } from '../utils/logger.js';
-import { getApiKey, setApiKey } from './apiKeyConfig.js';
+import { getApiKey, setApiKey } from '../../config/apiKeyConfig.js';
+import { CREDENTIAL_KEYS } from '../../constants/config.js';
+import { readConfig, writeConfig } from '../../store/configStrore.js';
+import { JIRA_CLOUD_URL_REGEX } from './jira.constants.js';
 
 export const getJiraApiKeyOrPrompt = async (): Promise<string> => {
   const jiraApiKey = await getApiKey(CREDENTIAL_KEYS.JIRA_API);
@@ -84,38 +83,4 @@ export const getJiraEmailOrPrompt = async () => {
   }
 
   return email;
-};
-
-export const getJiraIssues = async (): Promise<JiraIssue[]> => {
-  try {
-    const apiKey = await getJiraApiKeyOrPrompt();
-    const cloudUrl = await getJiraCloudUrlOrPrompt();
-    const jql = await getJiraJqlOrPrompt();
-    const email = await getJiraEmailOrPrompt();
-
-    const requestUrl = new URL(`${cloudUrl}/rest/api/3/search/jql`);
-    requestUrl.searchParams.set('jql', jql);
-    requestUrl.searchParams.set('maxResults', '50');
-    requestUrl.searchParams.set('fields', 'summary,key,status');
-
-    const response = await fetch(requestUrl.toString(), {
-      method: 'GET',
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${email}:${apiKey}`).toString('base64')}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Jira issues: ${response.status} ${response.statusText}`);
-    }
-
-    const data = (await response.json()) as JiraIssuesResponse;
-
-    return data.issues;
-  } catch (error) {
-    logger.error(`Failed to fetch Jira issues: ${error}`);
-    return [];
-  }
 };

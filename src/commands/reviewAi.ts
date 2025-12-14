@@ -5,9 +5,9 @@ import ora, { Ora } from 'ora';
 
 import { getApiKey } from '../config/apiKeyConfig.js';
 import { CREDENTIAL_KEYS } from '../constants/config.js';
-import { getReviewPrompt } from '../constants/prompts.js';
-import { streamAiResponse } from '../utils/ai.js';
-import { getStagedChangesDiff } from '../utils/git.js';
+import { getReviewPrompt } from '../domains/ai/ai.prompts.js';
+import { streamAiResponse } from '../domains/ai/ai.service.js';
+import { getStagedChangesDiff } from '../domains/git/git.service.js';
 import { logger } from '../utils/logger.js';
 
 export const reviewAi = async (diffContent: string) => {

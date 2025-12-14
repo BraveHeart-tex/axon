@@ -3,14 +3,14 @@ import ora, { Ora } from 'ora';
 
 import { getApiKey, setApiKey } from '../config/apiKeyConfig.js';
 import { CREDENTIAL_KEYS } from '../constants/config.js';
-import { getCommitMessagePrompt } from '../constants/prompts.js';
-import { streamAiResponse } from '../utils/ai.js';
+import { getCommitMessagePrompt } from '../domains/ai/ai.prompts.js';
+import { streamAiResponse } from '../domains/ai/ai.service.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
   inferScopeTypeFromBranch,
-} from '../utils/git.js';
+} from '../domains/git/git.service.js';
 import { logger } from '../utils/logger.js';
 
 export const generateAICommit = async () => {
