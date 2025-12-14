@@ -9,10 +9,16 @@ const CONFIG_PATH = path.join(AXON_DIR, 'config.json');
 
 export interface AxonConfig {
   mode: CliMode;
+  jiraCloudUrl: string;
+  jiraJql: string;
+  jiraEmail: string;
 }
 
 const DEFAULT_CONFIG: AxonConfig = {
   mode: 'default',
+  jiraCloudUrl: '',
+  jiraJql: '',
+  jiraEmail: '',
 };
 
 const ensureConfigFile = () => {
@@ -44,10 +50,4 @@ export const writeConfig = (update: Partial<AxonConfig>) => {
   const next = { ...current, ...update };
 
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(next, null, 2), 'utf-8');
-};
-
-export const getMode = (): CliMode => readConfig().mode;
-
-export const setMode = (mode: CliMode) => {
-  writeConfig({ mode });
 };

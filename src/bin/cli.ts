@@ -5,10 +5,11 @@ import { generateAICommit } from '../commands/commitAi.js';
 import { configureApiKey } from '../commands/config.js';
 import { createFeatureBranch } from '../commands/feature.js';
 import { addFeatureFlag } from '../commands/featureFlag.js';
-import { setCliMode } from '../commands/mode.js';
+import { setMode } from '../commands/mode.js';
 import { createReleaseBranch, ReleaseOptions } from '../commands/release.js';
 import { reviewAi } from '../commands/reviewAi.js';
 import { searchCommits } from '../commands/searchCommits.js';
+import { getCliMode } from '../config/cliConfig.js';
 
 const program = new Command();
 
@@ -18,7 +19,8 @@ program
   .command('feature')
   .description('Create a new feature branch')
   .action(async () => {
-    await createFeatureBranch();
+    const cliMode = getCliMode();
+    await createFeatureBranch(cliMode);
   });
 
 program
@@ -80,7 +82,7 @@ program
   .argument('<type>', 'jira | default')
   .description('Set CLI mode')
   .action(async (type) => {
-    await setCliMode(type);
+    await setMode(type);
   });
 
 program.parse(process.argv);
