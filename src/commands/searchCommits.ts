@@ -8,7 +8,7 @@ interface SearchCommitsAnswers {
   selectedCommits: string[];
 }
 
-export const searchCommits = async (jiraKey: string) => {
+export const searchCommitsCommand = async (jiraKey: string) => {
   const stdout = await getCommitsByGrep(jiraKey);
 
   if (!stdout) {

@@ -1,10 +1,11 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 
-import { CLI_MODES, CliMode } from '../constants/mode.js';
+import { CLI_MODES } from '../constants/mode.js';
 import { checkoutAndCreateBranch } from '../domains/git/git.service.js';
 import { JIRA_REGEX } from '../domains/jira/jira.constants.js';
 import { getJiraIssues } from '../domains/jira/jira.service.js';
+import { getCliModeConfig } from '../domains/mode/mode.service.js';
 import { logger } from '../utils/logger.js';
 
 const commitLabels = [
@@ -22,7 +23,9 @@ const commitLabels = [
 
 type CommitLabel = (typeof commitLabels)[number];
 
-export const createFeatureBranch = async (cliMode: CliMode) => {
+export const featureCommand = async () => {
+  const cliMode = getCliModeConfig();
+
   let issueKey = '';
 
   if (cliMode === CLI_MODES.JIRA) {

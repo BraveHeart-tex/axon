@@ -7,7 +7,7 @@ import { writeEnvFile } from '../domains/featureFlag/writers/envFile.writer.js';
 import { updateGitlabCI } from '../domains/featureFlag/writers/gitlabCi.writer.js';
 import { updateFeatureFlagHelper } from '../domains/featureFlag/writers/tsHelper.writer.js';
 
-export const addFeatureFlag = async () => {
+export const featureFlagCommand = async () => {
   const questions: DistinctQuestion[] = [
     {
       type: 'input',

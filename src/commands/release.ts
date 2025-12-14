@@ -17,7 +17,7 @@ export interface ReleaseOptions {
   author: string;
 }
 
-export const createReleaseBranch = async (options: ReleaseOptions) => {
+export const releaseCommand = async (options: ReleaseOptions) => {
   const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
     {
       type: 'list',
