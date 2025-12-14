@@ -15,7 +15,7 @@ export const updateFeatureFlagHelper = (flagName: string) => {
   logger.success('File saved');
 };
 
-function updateFeatureFlagUnion(sourceFile: SourceFile, logicalName: string) {
+const updateFeatureFlagUnion = (sourceFile: SourceFile, logicalName: string) => {
   const typeAlias = sourceFile.getTypeAlias('FeatureFlagName');
   if (!typeAlias) return;
 
@@ -33,22 +33,20 @@ function updateFeatureFlagUnion(sourceFile: SourceFile, logicalName: string) {
   const newUnion = formatUnion(flags);
   typeAlias.setType('\n  ' + newUnion);
   logger.success('Updated FeatureFlagName union (sorted)');
-}
+};
 
-function extractUnionFlags(typeText: string): string[] {
+const extractUnionFlags = (typeText: string): string[] => {
   const matches = typeText.matchAll(/'([^']+)'/g);
   const flags: string[] = [];
   for (const match of matches) {
     flags.push(match[1]);
   }
   return flags;
-}
+};
 
-function formatUnion(flags: string[]): string {
-  return flags.map((f) => `| '${f}'`).join('\n  ');
-}
+const formatUnion = (flags: string[]): string => flags.map((f) => `| '${f}'`).join('\n  ');
 
-function updateFeatureFlagSwitch(sourceFile: SourceFile, logicalName: string) {
+export const updateFeatureFlagSwitch = (sourceFile: SourceFile, logicalName: string) => {
   const variableStatement = sourceFile.getVariableDeclaration('isFeatureFlagEnabled');
   if (!variableStatement) {
     logger.error('Variable declaration isFeatureFlagEnabled not found');
@@ -76,11 +74,11 @@ function updateFeatureFlagSwitch(sourceFile: SourceFile, logicalName: string) {
   const newSwitchBody = buildSwitchBody(cases);
   switchStatement.replaceWithText(newSwitchBody);
   logger.success('Switch statement sorted alphabetically');
-}
+};
 
-function extractSwitchCases(
+export const extractSwitchCases = (
   switchStatement: SwitchStatement,
-): Array<{ name: string; envVar: string }> {
+): Array<{ name: string; envVar: string }> => {
   const caseBlock = switchStatement.getCaseBlock();
   const clauses = caseBlock.getClauses();
   const cases: Array<{ name: string; envVar: string }> = [];
@@ -106,9 +104,9 @@ function extractSwitchCases(
   }
 
   return cases;
-}
+};
 
-function buildSwitchBody(cases: Array<{ name: string; envVar: string }>): string {
+const buildSwitchBody = (cases: Array<{ name: string; envVar: string }>): string => {
   const indent = '    ';
   const casesText = cases
     .map(
@@ -122,4 +120,4 @@ ${casesText}
 ${indent}default:
 ${indent}  return false;
   }`;
-}
+};

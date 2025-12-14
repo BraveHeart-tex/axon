@@ -5,6 +5,7 @@ import { generateAICommit } from '../commands/commitAi.js';
 import { configureApiKey } from '../commands/config.js';
 import { createFeatureBranch } from '../commands/feature.js';
 import { addFeatureFlag } from '../commands/featureFlag.js';
+import { setCliMode } from '../commands/mode.js';
 import { createReleaseBranch, ReleaseOptions } from '../commands/release.js';
 import { reviewAi } from '../commands/reviewAi.js';
 import { searchCommits } from '../commands/searchCommits.js';
@@ -72,6 +73,14 @@ program
   .description('Add a feature flag')
   .action(async () => {
     await addFeatureFlag();
+  });
+
+program
+  .command('mode')
+  .argument('<type>', 'jira | default')
+  .description('Set CLI mode')
+  .action(async (type) => {
+    await setCliMode(type);
   });
 
 program.parse(process.argv);

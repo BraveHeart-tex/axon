@@ -5,7 +5,7 @@ const FROM_BUILDER = /^FROM\s+base\s+AS\s+builder/i;
 const COPY_DOT_REGEX = /^\s*COPY\b.*\.\s+\.\s*$/i;
 const ARG_LINE = /^\s*ARG\s+([A-Z0-9_]+)/i;
 
-export function updateDockerfileFeatureFlag(flagName: string) {
+export const updateDockerfileFeatureFlag = (flagName: string) => {
   const dockerfilePath = path.resolve(process.cwd(), 'Dockerfile.local');
   if (!fs.existsSync(dockerfilePath)) return;
 
@@ -45,9 +45,9 @@ export function updateDockerfileFeatureFlag(flagName: string) {
 
   const content = finalLines.join('\n');
   fs.writeFileSync(dockerfilePath, content, 'utf-8');
-}
+};
 
-function extractKey(line: string): string {
+const extractKey = (line: string): string => {
   const m = line.match(ARG_LINE);
   return m ? m[1] : '';
-}
+};

@@ -6,8 +6,8 @@ export const getCommitMessagePrompt = ({
   diff: string;
   inferredScope?: string;
   inferredScopeType?: string;
-}) => {
-  return `
+}) =>
+  `
 You are an experienced software engineer writing a **single-line** Conventional Commit message.
 
 Format strictly as:
@@ -41,10 +41,8 @@ ${inferredScope ? `Given scope: ${inferredScope}\n` : ''}
 ${diff.trim().slice(0, 5000)}
 ---END---
 `.trim();
-};
 
-export const getReviewPrompt = (diff: string) => {
-  return `
+export const getReviewPrompt = (diff: string) => `
   You are a senior developer reviewing code.
 Please provide a self-review for the following staged changes:
 
@@ -57,4 +55,3 @@ Highlight:
 - Missing tests
 - Suggestions for improvements
   `;
-};
