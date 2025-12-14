@@ -10,7 +10,7 @@ import {
   getScopeFromCommitMessage,
   pullBranch,
 } from '../domains/git/git.service.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../infra/logger.js';
 
 export interface ReleaseOptions {
   onlyUnmerged: boolean;

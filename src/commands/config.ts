@@ -1,8 +1,9 @@
 import inquirer from 'inquirer';
 
 import { deleteApiKey, getApiKey, listApiKeys, setApiKey } from '../config/apiKeyConfig.js';
-import { CREDENTIAL_KEYS, CredentialKey } from '../constants/config.js';
-import { logger } from '../utils/logger.js';
+import { CREDENTIAL_KEYS } from '../domains/config/config.constants.js';
+import { CredentialKey } from '../domains/config/config.types.js';
+import { logger } from '../infra/logger.js';
 
 export const configCommand = async () => {
   const { action } = await inquirer.prompt<{ action: 'set' | 'view' | 'delete' | 'list' }>([

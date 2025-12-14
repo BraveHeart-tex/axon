@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
 
-import { logger } from '../../../utils/logger.js';
+import { logger } from '../../../infra/logger.js';
 
 export const updateGitlabCI = (flagName: string, stagingValue: string, productionValue: string) => {
   const ciFile = path.resolve(process.cwd(), '.gitlab-ci.yml');

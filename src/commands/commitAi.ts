@@ -2,16 +2,16 @@ import inquirer from 'inquirer';
 import ora, { Ora } from 'ora';
 
 import { getApiKey, setApiKey } from '../config/apiKeyConfig.js';
-import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { getCommitMessagePrompt } from '../domains/ai/ai.prompts.js';
 import { streamAiResponse } from '../domains/ai/ai.service.js';
+import { CREDENTIAL_KEYS } from '../domains/config/config.constants.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
   inferScopeTypeFromBranch,
 } from '../domains/git/git.service.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../infra/logger.js';
 
 export const commitAiCommand = async () => {
   let spinner: Ora | null = null;
