@@ -16,8 +16,8 @@ export const configureApiKey = async () => {
 
   if (action === 'list') {
     const keys = listApiKeys();
-    if (keys.length === 0) logger.info('❌ No keys stored yet.');
-    else logger.info(`🔑 Stored keys: ${keys.join(', ')}`);
+    if (keys.length === 0) logger.info('No keys stored yet.');
+    else logger.info(`Stored keys: ${keys.join(', ')}`);
     return;
   }
 
@@ -35,13 +35,13 @@ export const configureApiKey = async () => {
       { type: 'password', name: 'key', message: `Enter API key for "${name}":` },
     ]);
     await setApiKey(name, key);
-    logger.info(`✅ Key "${name}" saved securely.`);
+    logger.info(`Key "${name}" saved securely.`);
   } else if (action === 'view') {
     const key = await getApiKey(name);
-    if (key) logger.info(`🔑 Key for "${name}": ${key}`);
-    else logger.info(`❌ No key found for "${name}".`);
+    if (key) logger.info(`Key for "${name}": ${key}`);
+    else logger.info(`No key found for "${name}".`);
   } else if (action === 'delete') {
     await deleteApiKey(name);
-    logger.info(`🗑️ Key "${name}" deleted.`);
+    logger.info(`Key "${name}" deleted.`);
   }
 };

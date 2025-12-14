@@ -9,8 +9,8 @@ const color = {
 
 export const logger = {
   info: (msg: string, showLabel = true) =>
-    console.log(color.info(`${showLabel ? '[INFO]' : ''}  ${msg}`)),
-  success: (msg: string) => console.log(color.success(`[SUCCESS]  ${msg}`)),
-  warn: (msg: string) => console.warn(color.warn(`[WARN]  ${msg}`)),
-  error: (msg: string) => console.error(color.error(`[ERROR]  ${msg}`)),
+    console.log(color.info(`${showLabel ? '[INFO]:' : ''} ${msg}`)),
+  success: (msg: string) => console.log(color.success(`[SUCCESS]: ${msg}`)),
+  warn: (msg: string) => console.warn(color.warn(`[WARN]: ${msg}`)),
+  error: (msg: string) => console.error(color.error(`[ERROR]: ${msg}`)),
 };
