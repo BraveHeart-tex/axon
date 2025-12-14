@@ -11,6 +11,7 @@
     "isolatedModules": false,
     "outDir": "dist",
     "rootDir": ".",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }

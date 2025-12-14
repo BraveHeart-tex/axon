@@ -15,7 +15,7 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
   const issues = await getJiraIssues();
 
   if (issues.length === 0) {
-    logger.warn('No JIRA issues found. Please enter the issue key manually');
+    logger.warn('No JIRA issues found. Please enter the issue key manually.');
     return promptForIssueKey();
   }
 
