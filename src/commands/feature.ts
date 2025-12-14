@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 
-import { getJiraIssues } from '../config/jiraConfig.js';
-import { JIRA_REGEX } from '../constants/jira.js';
 import { CLI_MODES, CliMode } from '../constants/mode.js';
-import { checkoutAndCreateBranch } from '../utils/git.js';
+import { checkoutAndCreateBranch } from '../domains/git/git.service.js';
+import { JIRA_REGEX } from '../domains/jira/jira.constants.js';
+import { getJiraIssues } from '../domains/jira/jira.service.js';
 import { logger } from '../utils/logger.js';
 
 const commitLabels = [
