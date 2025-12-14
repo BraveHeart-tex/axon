@@ -10,7 +10,7 @@ import { streamAiResponse } from '../domains/ai/ai.service.js';
 import { getStagedChangesDiff } from '../domains/git/git.service.js';
 import { logger } from '../utils/logger.js';
 
-export const reviewAi = async (diffContent: string) => {
+export const reviewAiCommand = async (diffContent: string) => {
   let spinner: Ora | null = null;
   try {
     const aiApiKey = await getApiKey(CREDENTIAL_KEYS.AI);

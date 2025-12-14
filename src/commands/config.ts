@@ -4,7 +4,7 @@ import { deleteApiKey, getApiKey, listApiKeys, setApiKey } from '../config/apiKe
 import { CREDENTIAL_KEYS, CredentialKey } from '../constants/config.js';
 import { logger } from '../utils/logger.js';
 
-export const configureApiKey = async () => {
+export const configCommand = async () => {
   const { action } = await inquirer.prompt<{ action: 'set' | 'view' | 'delete' | 'list' }>([
     {
       type: 'list',

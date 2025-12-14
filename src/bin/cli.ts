@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 
-import { generateAICommit } from '../commands/commitAi.js';
-import { configureApiKey } from '../commands/config.js';
-import { createFeatureBranch } from '../commands/feature.js';
-import { addFeatureFlag } from '../commands/featureFlag.js';
-import { setCliMode } from '../commands/mode.js';
-import { createReleaseBranch, ReleaseOptions } from '../commands/release.js';
-import { reviewAi } from '../commands/reviewAi.js';
-import { searchCommits } from '../commands/searchCommits.js';
-import { getCliModeConfig } from '../domains/mode/mode.service.js';
+import { commitAiCommand } from '../commands/commitAi.js';
+import { configCommand } from '../commands/config.js';
+import { featureCommand } from '../commands/feature.js';
+import { featureFlagCommand } from '../commands/featureFlag.js';
+import { modeCommand } from '../commands/mode.js';
+import { releaseCommand, ReleaseOptions } from '../commands/release.js';
+import { reviewAiCommand } from '../commands/reviewAi.js';
+import { searchCommitsCommand } from '../commands/searchCommits.js';
 
 const program = new Command();
 
@@ -19,8 +18,7 @@ program
   .command('feature')
   .description('Create a new feature branch')
   .action(async () => {
-    const cliMode = getCliModeConfig();
-    await createFeatureBranch(cliMode);
+    await featureCommand();
   });
 
 program
@@ -29,14 +27,14 @@ program
   .option('--only-unmerged', 'Only show unmerged commits')
   .option('--author <author>', 'Filter by author')
   .action(async (options: ReleaseOptions) => {
-    await createReleaseBranch(options);
+    await releaseCommand(options);
   });
 
 program
   .command('commit-ai')
   .description('Generate a commit message with AI')
   .action(async () => {
-    await generateAICommit();
+    await commitAiCommand();
   });
 
 program
@@ -53,28 +51,28 @@ program
       const fs = await import('fs');
       diffContent = fs.readFileSync(options.diffFile, 'utf-8');
     }
-    await reviewAi(diffContent);
+    await reviewAiCommand(diffContent);
   });
 
 program
   .command('search-commits <jiraKey>')
   .description('Search commits by JIRA issue key')
   .action(async (jiraKey) => {
-    await searchCommits(jiraKey);
+    await searchCommitsCommand(jiraKey);
   });
 
 program
   .command('config')
   .description('Manage API keys securely')
   .action(async () => {
-    await configureApiKey();
+    await configCommand();
   });
 
 program
   .command('feature-flag')
   .description('Add a feature flag')
   .action(async () => {
-    await addFeatureFlag();
+    await featureFlagCommand();
   });
 
 program
@@ -82,7 +80,7 @@ program
   .argument('<type>', 'jira | default')
   .description('Set CLI mode')
   .action(async (type) => {
-    await setCliMode(type);
+    await modeCommand(type);
   });
 
 program.parse(process.argv);

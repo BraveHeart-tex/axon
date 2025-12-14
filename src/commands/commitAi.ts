@@ -13,7 +13,7 @@ import {
 } from '../domains/git/git.service.js';
 import { logger } from '../utils/logger.js';
 
-export const generateAICommit = async () => {
+export const commitAiCommand = async () => {
   let spinner: Ora | null = null;
 
   try {
