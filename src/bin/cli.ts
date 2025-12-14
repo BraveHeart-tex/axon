@@ -6,7 +6,7 @@ import { configCommand } from '../commands/config.js';
 import { featureCommand } from '../commands/feature.js';
 import { featureFlagCommand } from '../commands/featureFlag.js';
 import { modeCommand } from '../commands/mode.js';
-import { releaseCommand, ReleaseOptions } from '../commands/release.js';
+import { releaseCommand } from '../commands/release.js';
 import { reviewAiCommand } from '../commands/reviewAi.js';
 import { searchCommitsCommand } from '../commands/searchCommits.js';
 
@@ -14,28 +14,19 @@ const program = new Command();
 
 program.name('axon').description('Personal workflow assistant').version('1.0.0');
 
-program
-  .command('feature')
-  .description('Create a new feature branch')
-  .action(async () => {
-    await featureCommand();
-  });
+program.command('feature').description('Create a new feature branch').action(featureCommand);
 
 program
   .command('release')
   .description('Create a release branch')
   .option('--only-unmerged', 'Only show unmerged commits')
   .option('--author <author>', 'Filter by author')
-  .action(async (options: ReleaseOptions) => {
-    await releaseCommand(options);
-  });
+  .action(releaseCommand);
 
 program
   .command('commit-ai')
   .description('Generate a commit message with AI')
-  .action(async () => {
-    await commitAiCommand();
-  });
+  .action(commitAiCommand);
 
 program
   .command('review-ai')
@@ -57,31 +48,17 @@ program
 program
   .command('search-commits <jiraKey>')
   .description('Search commits by JIRA issue key')
-  .action(async (jiraKey) => {
-    await searchCommitsCommand(jiraKey);
-  });
+  .action(searchCommitsCommand);
 
-program
-  .command('config')
-  .description('Manage API keys securely')
-  .action(async () => {
-    await configCommand();
-  });
+program.command('config').description('Manage API keys securely').action(configCommand);
 
-program
-  .command('feature-flag')
-  .description('Add a feature flag')
-  .action(async () => {
-    await featureFlagCommand();
-  });
+program.command('feature-flag').description('Add a feature flag').action(featureFlagCommand);
 
 program
   .command('mode')
   .argument('<type>', 'jira | default')
   .description('Set CLI mode')
-  .action(async (type) => {
-    await modeCommand(type);
-  });
+  .action(modeCommand);
 
 program.parse(process.argv);
 

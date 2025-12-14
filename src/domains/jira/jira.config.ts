@@ -12,6 +12,7 @@ export const getJiraApiKeyOrPrompt = async (): Promise<string> => {
       {
         type: 'password',
         name: 'key',
+        mask: '*',
         message: `Enter API key for Jira:`,
         validate: (input: string) => input.length > 0,
       },
