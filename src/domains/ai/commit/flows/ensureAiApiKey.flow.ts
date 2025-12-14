@@ -1,8 +1,8 @@
 import inquirer from 'inquirer';
 
-import { getApiKey, setApiKey } from '../../../../config/apiKeyConfig.js';
-import { logger } from '../../../../infra/logger.js';
-import { CREDENTIAL_KEYS } from '../../../config/config.constants.js';
+import { getApiKey, setApiKey } from '@/config/apiKeyConfig.js';
+import { CREDENTIAL_KEYS } from '@/domains/config/config.constants.js';
+import { logger } from '@/infra/logger.js';
 
 export const ensureAiApiKey = async (): Promise<string> => {
   const apiKey = await getApiKey(CREDENTIAL_KEYS.AI);

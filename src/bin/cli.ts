@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 
-import { commitAiCommand } from '../commands/commitAi.js';
-import { configCommand } from '../commands/config.js';
-import { featureCommand } from '../commands/feature.js';
-import { featureFlagCommand } from '../commands/featureFlag.js';
-import { modeCommand } from '../commands/mode.js';
-import { releaseCommand } from '../commands/release.js';
-import { reviewAiCommand } from '../commands/reviewAi.js';
-import { searchCommitsCommand } from '../commands/searchCommits.js';
+import { commitAiCommand } from '@/commands/commitAi.js';
+import { configCommand } from '@/commands/config.js';
+import { featureCommand } from '@/commands/feature.js';
+import { featureFlagCommand } from '@/commands/featureFlag.js';
+import { modeCommand } from '@/commands/mode.js';
+import { releaseCommand } from '@/commands/release.js';
+import { reviewAiCommand } from '@/commands/reviewAi.js';
+import { searchCommitsCommand } from '@/commands/searchCommits.js';
 
 const program = new Command();
 

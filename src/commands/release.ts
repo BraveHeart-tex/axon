@@ -1,6 +1,6 @@
 import inquirer from 'inquirer';
 
-import { formatCommitChoice } from '../domains/git/git.formatter.js';
+import { formatCommitChoice } from '@/domains/git/git.formatter.js';
 import {
   checkoutBranch,
   cherryPickCommit,
@@ -9,8 +9,8 @@ import {
   getRecentCommitsForDevelop,
   getScopeFromCommitMessage,
   pullBranch,
-} from '../domains/git/git.service.js';
-import { logger } from '../infra/logger.js';
+} from '@/domains/git/git.service.js';
+import { logger } from '@/infra/logger.js';
 
 export interface ReleaseOptions {
   onlyUnmerged: boolean;

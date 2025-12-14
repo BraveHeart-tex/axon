@@ -1,4 +1,5 @@
-import { logger } from '../../infra/logger.js';
+import { logger } from '@/infra/logger.js';
+
 import { checkoutAndCreateBranch } from '../git/git.service.js';
 import { getCliModeConfig } from '../mode/mode.service.js';
 import { resolveBranchMeta } from './flows/resolveBranchMeta.flow.js';

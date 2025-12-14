@@ -1,8 +1,8 @@
 import inquirer from 'inquirer';
 
-import { parseGitLog } from '../domains/git/git.formatter.js';
-import { getCommitsByGrep } from '../domains/git/git.service.js';
-import { logger } from '../infra/logger.js';
+import { parseGitLog } from '@/domains/git/git.formatter.js';
+import { getCommitsByGrep } from '@/domains/git/git.service.js';
+import { logger } from '@/infra/logger.js';
 
 interface SearchCommitsAnswers {
   selectedCommits: string[];

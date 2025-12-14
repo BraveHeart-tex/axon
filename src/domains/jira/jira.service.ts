@@ -1,4 +1,5 @@
-import { logger } from '../../infra/logger.js';
+import { logger } from '@/infra/logger.js';
+
 import {
   getJiraApiKeyOrPrompt,
   getJiraCloudUrlOrPrompt,

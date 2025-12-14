@@ -1,7 +1,8 @@
 import inquirer from 'inquirer';
 
-import { getApiKey, setApiKey } from '../../config/apiKeyConfig.js';
-import { readConfig, writeConfig } from '../../infra/store/configStrore.js';
+import { getApiKey, setApiKey } from '@/config/apiKeyConfig.js';
+import { readConfig, writeConfig } from '@/infra/store/configStrore.js';
+
 import { CREDENTIAL_KEYS } from '../config/config.constants.js';
 import { JIRA_CLOUD_URL_REGEX } from './jira.constants.js';
 

@@ -1,6 +1,7 @@
 import ora, { Ora } from 'ora';
 
-import { logger } from '../../../infra/logger.js';
+import { logger } from '@/infra/logger.js';
+
 import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
 import { generateCommitMessage } from './flows/generateCommitMessage.flow.js';
 import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';

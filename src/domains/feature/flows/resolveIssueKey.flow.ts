@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 
-import { logger } from '../../../infra/logger.js';
-import { JIRA_REGEX } from '../../jira/jira.constants.js';
-import { getJiraIssues } from '../../jira/jira.service.js';
-import { CLI_MODES } from '../../mode/mode.constants.js';
+import { JIRA_REGEX } from '@/domains/jira/jira.constants.js';
+import { getJiraIssues } from '@/domains/jira/jira.service.js';
+import { CLI_MODES } from '@/domains/mode/mode.constants.js';
+import { logger } from '@/infra/logger.js';
 
 export const resolveIssueKey = async (cliMode: string): Promise<string> => {
   if (cliMode !== CLI_MODES.JIRA) {

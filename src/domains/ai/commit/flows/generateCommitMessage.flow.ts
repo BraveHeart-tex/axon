@@ -1,6 +1,6 @@
 import { getCommitMessagePrompt } from '../../ai.prompts.js';
 import { streamAiResponse } from '../../ai.service.js';
-import type { CommitContext } from './resolveCommitContext.flow.js';
+import { CommitContext } from './resolveCommitContext.flow.js';
 
 export const generateCommitMessage = async (
   apiKey: string,

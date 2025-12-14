@@ -3,7 +3,7 @@ import {
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
   inferScopeTypeFromBranch,
-} from '../../../git/git.service.js';
+} from '@/domains/git/git.service.js';
 
 export interface CommitContext {
   diff: string;
