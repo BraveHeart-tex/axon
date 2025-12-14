@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import ora, { Ora } from 'ora';
 
+import { getApiKey } from '../config/apiKeyConfig.js';
 import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { getReviewPrompt } from '../constants/prompts.js';
 import { streamAiResponse } from '../utils/ai.js';
-import { getApiKey } from '../utils/config.js';
 import { getStagedChangesDiff } from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 

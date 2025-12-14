@@ -6,15 +6,13 @@ export const createAiModel = (apiKey: string) => {
   return groq('openai/gpt-oss-20b');
 };
 
-export const streamAiResponse = async ({
-  apiKey,
-  onChunk,
-  prompt,
-}: {
+interface StreamAiResponseOptions {
   apiKey: string;
   prompt: string;
   onChunk: (chunk: string) => void;
-}) => {
+}
+
+export const streamAiResponse = async ({ apiKey, onChunk, prompt }: StreamAiResponseOptions) => {
   const model = createAiModel(apiKey);
 
   const { textStream } = streamText({

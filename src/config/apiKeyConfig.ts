@@ -1,7 +1,7 @@
 import keytar from 'keytar';
 
 import { CredentialKey } from '../constants/config.js';
-import { addKeyName, listKeyNames, removeKeyName } from './indexStore.js';
+import { addKeyName, listKeyNames, removeKeyName } from '../store/keyStore.js';
 
 const SERVICE = 'axon-cli';
 
@@ -10,15 +10,12 @@ export const setApiKey = async (name: CredentialKey, key: string) => {
   addKeyName(name);
 };
 
-export const getApiKey = async (name: CredentialKey): Promise<string | null> => {
-  return await keytar.getPassword(SERVICE, name);
-};
+export const getApiKey = async (name: CredentialKey): Promise<string | null> =>
+  await keytar.getPassword(SERVICE, name);
 
 export const deleteApiKey = async (name: CredentialKey) => {
   await keytar.deletePassword(SERVICE, name);
   removeKeyName(name);
 };
 
-export const listApiKeys = (): string[] => {
-  return listKeyNames();
-};
+export const listApiKeys = (): string[] => listKeyNames();

@@ -1,10 +1,10 @@
 import inquirer from 'inquirer';
 import ora, { Ora } from 'ora';
 
+import { getApiKey, setApiKey } from '../config/apiKeyConfig.js';
 import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { getCommitMessagePrompt } from '../constants/prompts.js';
 import { streamAiResponse } from '../utils/ai.js';
-import { getApiKey, setApiKey } from '../utils/config.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,

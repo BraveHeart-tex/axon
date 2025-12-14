@@ -101,9 +101,8 @@ export const formatCommitChoice = (commit: RecentCommit) => {
   };
 };
 
-export const cherryPickCommit = async (commitHash: string) => {
-  return execa('git', ['cherry-pick', commitHash], { stdio: 'inherit' });
-};
+export const cherryPickCommit = async (commitHash: string) =>
+  execa('git', ['cherry-pick', commitHash], { stdio: 'inherit' });
 
 export const getCurrentBranchName = async () => {
   const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
