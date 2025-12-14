@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { logger } from '../../../utils/logger.js';
+import { logger } from '../../../infra/logger.js';
 
 export const updateGlobalDts = (flagName: string) => {
   const globalFile = path.resolve(process.cwd(), 'global.d.ts');

@@ -4,11 +4,11 @@ import path from 'node:path';
 import ora, { Ora } from 'ora';
 
 import { getApiKey } from '../config/apiKeyConfig.js';
-import { CREDENTIAL_KEYS } from '../constants/config.js';
 import { getReviewPrompt } from '../domains/ai/ai.prompts.js';
 import { streamAiResponse } from '../domains/ai/ai.service.js';
+import { CREDENTIAL_KEYS } from '../domains/config/config.constants.js';
 import { getStagedChangesDiff } from '../domains/git/git.service.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../infra/logger.js';
 
 export const reviewAiCommand = async (diffContent: string) => {
   let spinner: Ora | null = null;

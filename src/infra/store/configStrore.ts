@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { CliMode } from '../constants/mode.js';
+import { CliMode } from '../../domains/mode/mode.types.js';
 
 const AXON_DIR = path.join(os.homedir(), '.axon');
 const CONFIG_PATH = path.join(AXON_DIR, 'config.json');

@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-import { logger } from '../../../utils/logger.js';
+import { logger } from '../../../infra/logger.js';
 
 export const writeEnvFile = (filePath: string, key: string, value: string) => {
   let content = '';

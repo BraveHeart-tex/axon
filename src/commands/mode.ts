@@ -1,6 +1,7 @@
-import { CLI_MODES, CliMode } from '../constants/mode.js';
+import { CLI_MODES } from '../domains/mode/mode.constants.js';
 import { setCliModeConfig } from '../domains/mode/mode.service.js';
-import { logger } from '../utils/logger.js';
+import { CliMode } from '../domains/mode/mode.types.js';
+import { logger } from '../infra/logger.js';
 
 export const modeCommand = async (type: CliMode) => {
   if (type !== CLI_MODES.JIRA && type !== CLI_MODES.DEFAULT) {

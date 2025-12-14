@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { CredentialKey } from '../constants/config.js';
+import { CredentialKey } from '../../domains/config/config.types.js';
 
 const INDEX_PATH = path.join(os.homedir(), '.axon', 'keys.json');
 
