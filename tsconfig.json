@@ -16,6 +16,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "eslint.config.ts"],
+  "include": ["src/**/*", "eslint.config.ts", "vitest.config.js", "tests/**/*"],
   "exclude": ["node_modules", "dist"]
 }

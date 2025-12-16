@@ -14,11 +14,12 @@
     ]
   },
   "scripts": {
-    "dev": "tsx ./src/bin/cli.ts",
     "build": "tsc -p tsconfig.build.json && tsc-alias",
+    "dev": "tsx ./src/bin/cli.ts",
     "format": "prettier --write .",
     "lint": "eslint --fix .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest"
   },
   "dependencies": {
     "@ai-sdk/groq": "2.0.22",
@@ -39,6 +40,7 @@
     "@commitlint/config-conventional": "20.0.0",
     "@eslint/js": "9.36.0",
     "@types/node": "24.5.2",
+    "@vitest/coverage-v8": "^4.0.16",
     "eslint": "9.36.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-simple-import-sort": "12.1.1",
@@ -52,7 +54,8 @@
     "tsc-alias": "^1.8.16",
     "tsx": "4.20.6",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.44.1"
+    "typescript-eslint": "8.44.1",
+    "vitest": "^4.0.16"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
