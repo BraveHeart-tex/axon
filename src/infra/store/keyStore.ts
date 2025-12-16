@@ -6,7 +6,7 @@ import { CredentialKey } from '@/domains/config/config.types.js';
 
 const INDEX_PATH = path.join(os.homedir(), '.axon', 'keys.json');
 
-export const ensureIndexFile = () => {
+const ensureIndexFile = () => {
   const dir = path.dirname(INDEX_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(INDEX_PATH)) fs.writeFileSync(INDEX_PATH, JSON.stringify([]));

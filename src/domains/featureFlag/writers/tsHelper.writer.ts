@@ -46,7 +46,7 @@ const extractUnionFlags = (typeText: string): string[] => {
 
 const formatUnion = (flags: string[]): string => flags.map((f) => `| '${f}'`).join('\n  ');
 
-export const updateFeatureFlagSwitch = (sourceFile: SourceFile, logicalName: string) => {
+const updateFeatureFlagSwitch = (sourceFile: SourceFile, logicalName: string) => {
   const variableStatement = sourceFile.getVariableDeclaration('isFeatureFlagEnabled');
   if (!variableStatement) {
     logger.error('Variable declaration isFeatureFlagEnabled not found');
@@ -76,7 +76,7 @@ export const updateFeatureFlagSwitch = (sourceFile: SourceFile, logicalName: str
   logger.success('Switch statement sorted alphabetically');
 };
 
-export const extractSwitchCases = (
+const extractSwitchCases = (
   switchStatement: SwitchStatement,
 ): Array<{ name: string; envVar: string }> => {
   const caseBlock = switchStatement.getCaseBlock();

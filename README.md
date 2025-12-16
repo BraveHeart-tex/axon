@@ -156,7 +156,7 @@ src/
 
 ### Dependencies
 
-- **AI Integration**: `@ai-sdk/groq`, `ai`, `openai`
+- **AI Integration**: `@ai-sdk/groq`, `ai`
 - **CLI Framework**: `commander`
 - **User Interface**: `inquirer`, `ora`, `chalk`
 - **Git Operations**: `execa`
