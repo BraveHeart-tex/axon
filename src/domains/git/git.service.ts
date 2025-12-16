@@ -64,7 +64,7 @@ export const getRecentCommitsForDevelop = async ({
     '--date=relative',
     '-n',
     String(limit),
-    author ? `--author=${author}` : '',
+    ...(author ? ['--author', author] : []),
   ]);
 
   if (stdout === '') {
