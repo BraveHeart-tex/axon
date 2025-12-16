@@ -79,4 +79,38 @@ describe('runFeatureFlow', () => {
 
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Git operation failed'));
   });
+
+  it('should log info before performing git operations', async () => {
+    (getCliModeConfig as Mock).mockReturnValue('JIRA');
+    (resolveIssueKey as Mock).mockResolvedValue('ORD-123');
+    (resolveBranchMeta as Mock).mockResolvedValue({
+      commitLabel: 'feature',
+      slug: 'add-logging',
+    });
+
+    await runFeatureFlow();
+
+    expect(logger.info).toHaveBeenCalledWith('Checking out develop and pulling latest changes...');
+    expect(checkoutAndCreateBranch).toHaveBeenCalledWith('develop', 'feature/ORD-123-add-logging');
+  });
+
+  it('should reject when resolving issue key fails', async () => {
+    (getCliModeConfig as Mock).mockReturnValue('JIRA');
+    (resolveIssueKey as Mock).mockRejectedValue(new Error('No issue found'));
+
+    await expect(runFeatureFlow()).rejects.toThrow('No issue found');
+  });
+
+  it('should use the commit label from branch meta when creating the branch', async () => {
+    (getCliModeConfig as Mock).mockReturnValue('JIRA');
+    (resolveIssueKey as Mock).mockResolvedValue('ORD-777');
+    (resolveBranchMeta as Mock).mockResolvedValue({
+      commitLabel: 'hotfix',
+      slug: 'critical-fix',
+    });
+
+    await runFeatureFlow();
+
+    expect(checkoutAndCreateBranch).toHaveBeenCalledWith('develop', 'hotfix/ORD-777-critical-fix');
+  });
 });
