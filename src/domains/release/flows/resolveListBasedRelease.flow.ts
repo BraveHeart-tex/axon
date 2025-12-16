@@ -47,7 +47,9 @@ export const resolveListBasedRelease = async (options: ReleaseOptions) => {
 
   const branchTitle =
     selectedCommits.length === 1
-      ? `${BRANCH_PREFIX}/${getScopeFromCommitMessage(selectedCommits[0])}`
+      ? `${BRANCH_PREFIX}/${getScopeFromCommitMessage(
+          recentCommits.find((commit) => commit.hash === selectedCommits[0]!)?.message || '',
+        )}`
       : await promptForBranchTitle();
 
   return {
