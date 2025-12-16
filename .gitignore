@@ -43,3 +43,6 @@ Thumbs.db
 # Optional: temporary files
 *.tmp
 *.temp
+
+# Test coverage
+coverage/
