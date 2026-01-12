@@ -114,3 +114,22 @@ export const getScopeFromCommitMessage = (commitMessage: string): string => {
   const fallbackScope = commitMessage.split(':')[0]?.trim() ?? '';
   return fallbackScope;
 };
+
+export const getRemoteOriginUrl = async () => {
+  const { stdout } = await execa('git', ['remote', 'get-url', 'origin']);
+  return stdout;
+};
+
+export const createMergeRequestUrl = async ({
+  remoteOriginUrl,
+  sourceBranch,
+  targetBranch,
+}: {
+  remoteOriginUrl: string;
+  sourceBranch: string;
+  targetBranch: string;
+}) => {
+  const baseUrl = remoteOriginUrl.replace(/\.git$/, '');
+  const mergeRequestUrl = `${baseUrl}/-/merge_requests/new?merge_request[source_branch]=${sourceBranch}&merge_request[target_branch]=${targetBranch}`;
+  return mergeRequestUrl;
+};
