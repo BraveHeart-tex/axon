@@ -38,14 +38,24 @@ export const getStagedChangesDiff = async (): Promise<string> => {
   const { stdout } = await execa('git', [
     'diff',
     '--cached',
+    '--ignore-all-space',
+    '--ignore-blank-lines',
+    '-U3',
     '--',
-    ':!*.lock',
-    ':!*.svg',
-    ':!*.png',
-    ':!*.jpg',
-    ':!*.jpeg',
+    ':!**/*.lock',
+    ':!**/*.svg',
+    ':!**/*.png',
+    ':!**/*.jpg',
+    ':!**/*.jpeg',
+    ':!**/*.map',
+    ':!**/dist/**',
+    ':!**/build/**',
   ]);
-  return stdout;
+
+  if (!stdout.trim()) return '';
+
+  const MAX_CHARS = 20_000;
+  return stdout.length > MAX_CHARS ? stdout.slice(0, MAX_CHARS) + '\n…diff truncated' : stdout;
 };
 
 export const getRecentCommitsForDevelop = async ({
