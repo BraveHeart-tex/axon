@@ -7,40 +7,25 @@ export const getCommitMessagePrompt = ({
   inferredScope?: string;
   inferredScopeType?: string;
 }) =>
-  `
-You are an experienced software engineer writing a **single-line** Conventional Commit message.
+  `Generate a single-line Conventional Commit message.
 
-Format strictly as:
-type(scope): summary
-or
-type: summary  ← (only if no scope applies)
+Format: type(scope): summary  OR  type: summary
 
-### Requirements
-- **Allowed types:** feat, fix, refactor, docs, chore
-- **Scope:** use "${inferredScope ?? 'infer from context'}"
-  - If no clear scope exists, omit parentheses entirely.
-- **Scope Type:** use "${inferredScopeType ?? 'infer from context'}"
-  - If no clear scope type exists, omit parentheses entirely.
-- **Summary:** express the *reason and impact* of the change, not just the action.
-- Focus on *clarity, intent, and improvement*.
-- Write in an active, professional tone (e.g., “clarify”, “enhance”, “streamline”, “ensure”).
-- Keep ≤ 72 characters.
-- Do not include explanations, examples, or markdown.
+Types: feat, fix, refactor, docs, chore
+${inferredScope ? `Scope: ${inferredScope}` : 'Scope: infer from diff or omit if unclear'}
+${inferredScopeType ? `Context: ${inferredScopeType}` : ''}
 
-### Reasoning Hints
-- What’s the **main purpose** behind this change?
-- How does it improve code quality, clarity, or behavior?
-- Replace mechanical verbs like “update” or “change” with meaningful ones like:
-  - "clarify", "optimize", "simplify", "enforce", "document", "align", "improve"
-- If the change is internal, emphasize the *benefit* (e.g., maintainability, readability).
+Summary guidelines:
+- Express WHY and the impact, not just what changed
+- Use clear verbs: clarify, enhance, optimize, enforce, streamline, ensure
+- Avoid generic verbs: update, change, modify
+- Max 100 chars total
+- Professional, active voice
 
-${inferredScope ? `Given scope: ${inferredScope}\n` : ''}
-
-### Diff
----START---
+Diff:
 ${diff.trim().slice(0, 5000)}
----END---
-`.trim();
+
+Output only the commit message, nothing else.`.trim();
 
 export const getReviewPrompt = (diff: string) => `
   You are a senior developer reviewing code.

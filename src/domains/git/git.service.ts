@@ -40,7 +40,8 @@ export const getStagedChangesDiff = async (): Promise<string> => {
     '--cached',
     '--ignore-all-space',
     '--ignore-blank-lines',
-    '-U3',
+    '-U5',
+    '--diff-algorithm=histogram',
     '--',
     ':!**/*.lock',
     ':!**/*.svg',
@@ -50,12 +51,16 @@ export const getStagedChangesDiff = async (): Promise<string> => {
     ':!**/*.map',
     ':!**/dist/**',
     ':!**/build/**',
+    ':!**/node_modules/**',
+    ':!**/*.min.js',
   ]);
 
   if (!stdout.trim()) return '';
 
-  const MAX_CHARS = 20_000;
-  return stdout.length > MAX_CHARS ? stdout.slice(0, MAX_CHARS) + '\n…diff truncated' : stdout;
+  const MAX_CHARS = 15_000;
+  return stdout.length > MAX_CHARS
+    ? stdout.slice(0, MAX_CHARS) + '\n[diff truncated for length]'
+    : stdout;
 };
 
 export const getRecentCommitsForDevelop = async ({
