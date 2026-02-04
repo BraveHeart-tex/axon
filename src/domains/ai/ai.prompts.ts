@@ -1,31 +1,30 @@
-export const getCommitMessagePrompt = ({
-  diff,
-  inferredScope,
-  inferredScopeType,
-}: {
-  diff: string;
-  inferredScope?: string;
-  inferredScopeType?: string;
-}) =>
-  `Generate a single-line Conventional Commit message.
+import { CommitClassification } from './commit/flows/classifyCommit.flow.js';
+import { CommitContext } from './commit/flows/resolveCommitContext.flow.js';
+import { formatSummary } from './commit/formatSummary.js';
 
-Format: type(scope): summary  OR  type: summary
+export const getCommitMessagePrompt = (classification: CommitClassification) =>
+  `
+Generate ONE Conventional Commit message.
 
-Types: feat, fix, refactor, docs, chore
-${inferredScope ? `Scope: ${inferredScope}` : 'Scope: infer from diff or omit if unclear'}
-${inferredScopeType ? `Context: ${inferredScopeType}` : ''}
+Hard rules:
+- Single line only
+- No punctuation at end
+- Max 100 characters
+- Active voice
+- No markdown or explanations
 
-Summary guidelines:
-- Express WHY and the impact, not just what changed
-- Use clear verbs: clarify, enhance, optimize, enforce, streamline, ensure
-- Avoid generic verbs: update, change, modify
-- Max 100 chars total
-- Professional, active voice
+Format:
+type(scope): summary
+or
+type: summary
 
-Diff:
-${diff.trim().slice(0, 5000)}
+Commit type: ${classification.type}
+${classification.scope ? `Scope: ${classification.scope}` : 'Scope: omit'}
+Intent:
+${classification.intent}
 
-Output only the commit message, nothing else.`.trim();
+Output ONLY the commit message.
+`.trim();
 
 export const getReviewPrompt = (diff: string) => `
   You are a senior developer reviewing code.
@@ -40,3 +39,26 @@ Highlight:
 - Missing tests
 - Suggestions for improvements
   `;
+
+export const getClassificationPrompt = (context: CommitContext) =>
+  `
+Classify the staged changes.
+
+Return JSON only:
+{
+  "type": "feat|fix|refactor|docs|chore",
+  "scope": "string | null",
+  "intent": "short intent, max 12 words"
+}
+
+Hints:
+- Expected type: ${context.expectedType ?? 'infer'}
+- Scope from branch: ${context.inferredScope ?? 'infer'}
+- Branch intent: ${context.branchIntent ?? 'none'}
+
+High-level summary:
+${formatSummary(context.diffSummary)}
+
+Raw diff (reference only):
+${context.diff.slice(0, 3000)}
+`.trim();

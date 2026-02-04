@@ -5,10 +5,18 @@ import {
   inferScopeTypeFromBranch,
 } from '@/domains/git/git.service.js';
 
+import { DiffSummary, summarizeDiff } from '../diffSummary.js';
+import { inferCommitTypeFromBranch, inferIntentFromBranch } from '../inferFromBranch.js';
+import { CommitType } from '../types.js';
+
 export interface CommitContext {
   diff: string;
   inferredScope?: string;
   inferredScopeType?: string;
+
+  diffSummary: DiffSummary;
+  branchIntent?: string;
+  expectedType?: CommitType;
 }
 
 export const resolveCommitContext = async (): Promise<CommitContext> => {
@@ -23,5 +31,8 @@ export const resolveCommitContext = async (): Promise<CommitContext> => {
     diff,
     inferredScope: inferJiraScopeFromBranch(branchName),
     inferredScopeType: inferScopeTypeFromBranch(branchName),
+    branchIntent: inferIntentFromBranch(branchName),
+    expectedType: inferCommitTypeFromBranch(branchName),
+    diffSummary: summarizeDiff(diff),
   };
 };

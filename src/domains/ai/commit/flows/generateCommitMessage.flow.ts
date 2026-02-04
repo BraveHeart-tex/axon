@@ -1,20 +1,16 @@
 import { getCommitMessagePrompt } from '../../ai.prompts.js';
 import { streamAiResponse } from '../../ai.service.js';
-import { CommitContext } from './resolveCommitContext.flow.js';
+import { CommitClassification } from './classifyCommit.flow.js';
 
 export const generateCommitMessage = async (
   apiKey: string,
-  context: CommitContext,
+  classification: CommitClassification,
 ): Promise<string> => {
   let fullMessage = '';
 
   await streamAiResponse({
     apiKey,
-    prompt: getCommitMessagePrompt({
-      diff: context.diff,
-      inferredScope: context.inferredScope,
-      inferredScopeType: context.inferredScopeType,
-    }),
+    prompt: getCommitMessagePrompt(classification),
     onChunk: (chunk) => {
       fullMessage += chunk;
     },
