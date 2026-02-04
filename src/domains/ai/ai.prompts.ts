@@ -27,18 +27,33 @@ Output ONLY the commit message.
 `.trim();
 
 export const getReviewPrompt = (diff: string) => `
-  You are a senior developer reviewing code.
-Please provide a self-review for the following staged changes:
+  You are a principal-level Software Engineer with 10+ years of experience building high-performance, scalable, and maintainable applications.
+  * Assume this code is part of a production-grade system.
+  * Prefer actionable, concrete suggestions over generic advice
+  * Call out both improvements and risks
 
+  Output Format:
+  Organize findings into severity-based sections:
+  - Critical (Must fix)
+  Issues that can cause bugs, broken behavior, data inconsistency, or rule violations.
+  - High (Should fix)
+  Issues that may cause performance degradation, maintainability problems, or incorrect assumptions.
+  - Medium (Nice to improve)
+  Improvements that increase clarity, structure, or long-term scalability.
+  - Low (Nitpicks / Style)
+  Minor suggestions related to naming, formatting, or conventions.
+  For each item, include:
+  * What changed (reference the diff)
+  * Why it matters
+  * Concrete recommendation (prefer examples or alternative patterns)
+  If something is done well, explicitly call it out under:
+  Positive Observations
+
+  Below is the git diff to review:
+  \`\`\`diff
 ${diff}
-
-Highlight:
-- Possible bugs
-- Code smells
-- Naming issues
-- Missing tests
-- Suggestions for improvements
-  `;
+  \`\`\`
+`;
 
 export const getClassificationPrompt = (context: CommitContext) =>
   `
