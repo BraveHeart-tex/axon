@@ -12,6 +12,15 @@ Hard rules:
 - Max 100 characters
 - Active voice
 - No markdown or explanations
+- MUST explain the reason or impact, not the implementation details
+
+Forbidden:
+- Describing code changes (e.g. "add", "update", "change", "refactor")
+- Listing files, functions, or technical steps
+
+Required:
+- Explain WHY the change exists or WHAT problem it solves
+- Focus on user, system, or developer impact
 
 Format:
 type(scope): summary
@@ -20,8 +29,14 @@ type: summary
 
 Commit type: ${classification.type}
 ${classification.scope ? `Scope: ${classification.scope}` : 'Scope: omit'}
-Intent:
+
+Reason / intent (do not restate verbatim):
 ${classification.intent}
+
+Examples (style reference only):
+- fix(auth): prevent silent login failures
+- feat(upload): enable secure client-side image handling
+- refactor(api): simplify request validation flow
 
 Output ONLY the commit message.
 `.trim();

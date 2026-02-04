@@ -17,7 +17,7 @@ export const runCommitAiFlow = async () => {
     spinner = ora('Analyzing changes...').start();
     const classification = await classifyCommit(apiKey, context);
 
-    spinner.text = '✍️ Generating commit message...';
+    spinner.text = 'Generating commit message...';
 
     const message = await generateCommitMessage(apiKey, classification);
 
