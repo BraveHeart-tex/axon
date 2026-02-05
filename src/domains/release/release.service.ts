@@ -45,7 +45,7 @@ export const runReleaseFlow = async (options: ReleaseOptions) => {
       targetBranch: 'main',
     });
 
-    logger.info(`Use ${mergeRequestUrl} to create a merge request.`);
+    logger.info(`After pushing to remote, use ${mergeRequestUrl} to create a merge request.`);
   } catch (err) {
     logger.error(`Git operation failed: ${(err as Error).message}`);
   }
