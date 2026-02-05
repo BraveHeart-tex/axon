@@ -13,13 +13,15 @@ export const runFeatureFlow = async () => {
 
   const branch = slug ? `${commitLabel}/${issueKey}-${slug}` : `${commitLabel}/${issueKey}`;
 
-  logger.info('Checking out develop and pulling latest changes...');
+  logger.info('Resolving base branch...');
 
   try {
     const baseBranch = (await remoteBranchExists('develop')) ? 'develop' : 'main';
 
     if (baseBranch === 'main') {
       logger.info('No develop branch found, using main branch');
+    } else {
+      logger.info('Checking out develop and pulling latest changes...');
     }
 
     await checkoutAndCreateBranch(baseBranch, branch);
