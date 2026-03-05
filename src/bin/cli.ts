@@ -7,7 +7,6 @@ import { featureCommand } from '@/commands/feature.js';
 import { featureFlagCommand } from '@/commands/featureFlag.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
-import { reviewAiCommand } from '@/commands/reviewAi.js';
 import { searchCommitsCommand } from '@/commands/searchCommits.js';
 
 const program = new Command();
@@ -27,13 +26,6 @@ program
   .command('commit-ai')
   .description('Generate a commit message with AI')
   .action(commitAiCommand);
-
-program
-  .command('review-ai')
-  .description('Generate a code review with ai')
-  .option('--diff <diff>', 'Provide diff inline')
-  .option('--diff-file <path>', 'Provide path to diff file')
-  .action(reviewAiCommand);
 
 program
   .command('search-commits <jiraKey>')

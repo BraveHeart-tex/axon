@@ -9,7 +9,7 @@ import { generateAiResponse } from '../ai.service.js';
 import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
 import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';
 
-const generateMessage = async (
+export const generateMessage = async (
   apiKey: string,
   context: Awaited<ReturnType<typeof resolveCommitContext>>,
 ): Promise<string> => {
