@@ -1,45 +1,52 @@
-import { CommitClassification } from './commit/flows/classifyCommit.flow.js';
+import { AiMessage } from './ai.service.js';
 import { CommitContext } from './commit/flows/resolveCommitContext.flow.js';
-import { formatSummary } from './commit/formatSummary.js';
 
-export const getCommitMessagePrompt = (classification: CommitClassification) =>
-  `
-Generate ONE Conventional Commit message.
+export const getCommitMessagePrompt = (context: CommitContext): AiMessage[] => [
+  {
+    role: 'system',
+    content: `
+You are an expert developer writing Conventional Commit messages.
+Your job is to describe WHY a change exists or WHAT problem it solves — never WHAT the code does.
 
-Hard rules:
-- Single line only
-- No punctuation at end
-- Max 100 characters
-- Active voice
-- No markdown or explanations
-- MUST explain the reason or impact, not the implementation details
+## Rules
+- Output ONLY the commit message — no explanation, no markdown, no quotes, no preamble
+- Single line, max 72 characters
+- No trailing punctuation
+- Active voice, present tense
+- Format: type(scope): summary  or  type: summary
+- Valid types: feat, fix, refactor, docs, chore, test, perf
+- Infer scope from the diff (omit if unclear)
 
-Forbidden:
-- Describing code changes (e.g. "add", "update", "change", "refactor")
-- Listing files, functions, or technical steps
+## Anti-patterns — never produce these
+- refactor: update prompt formatting              ← describes code, not outcome
+- feat: add validation                            ← too vague
+- refactor: improve commit message quality        ← vague, could mean anything
+- chore: misc improvements                        ← meaningless
 
-Required:
-- Explain WHY the change exists or WHAT problem it solves
-- Focus on user, system, or developer impact
+## Good patterns — aim for this specificity
+- refactor: prevent AI from echoing code changes instead of developer intent
+- feat(auth): allow users to stay logged in across browser sessions
+- fix(upload): prevent silent failures when file exceeds size limit
+- perf(api): eliminate redundant DB calls on every request
+    `.trim(),
+  },
+  {
+    role: 'user',
+    content: `
+## Diff
+${context.diff.slice(0, 6000)}
 
-Format:
-type(scope): summary
-or
-type: summary
+## Branch context
+- Branch: ${context.branchName}
+${context.expectedType ? `- Inferred type: ${context.expectedType}` : ''}
+${context.inferredScope ? `- Inferred scope: ${context.inferredScope}` : ''}
+${context.branchIntent ? `- Branch intent: ${context.branchIntent}` : ''}
+${context.userHint ? `\n## My stated reason (use this as ground truth for the "why")\n${context.userHint}` : ''}
 
-Commit type: ${classification.type}
-${classification.scope ? `Scope: ${classification.scope}` : 'Scope: omit'}
-
-Reason / intent (do not restate verbatim):
-${classification.intent}
-
-Examples (style reference only):
-- fix(auth): prevent silent login failures
-- feat(upload): enable secure client-side image handling
-- refactor(api): simplify request validation flow
-
-Output ONLY the commit message.
-`.trim();
+Write the commit message now.
+    `.trim(),
+  },
+];
 
 export const getReviewPrompt = (diff: string) => `
   You are a principal-level Software Engineer with 10+ years of experience building high-performance, scalable, and maintainable applications.
@@ -69,26 +76,3 @@ export const getReviewPrompt = (diff: string) => `
 ${diff}
   \`\`\`
 `;
-
-export const getClassificationPrompt = (context: CommitContext) =>
-  `
-Classify the staged changes.
-
-Return JSON only:
-{
-  "type": "feat|fix|refactor|docs|chore",
-  "scope": "string | null",
-  "intent": "short intent, max 12 words"
-}
-
-Hints:
-- Expected type: ${context.expectedType ?? 'infer'}
-- Scope from branch: ${context.inferredScope ?? 'infer'}
-- Branch intent: ${context.branchIntent ?? 'none'}
-
-High-level summary:
-${formatSummary(context.diffSummary)}
-
-Raw diff (reference only):
-${context.diff.slice(0, 3000)}
-`.trim();
