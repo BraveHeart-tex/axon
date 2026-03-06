@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+
 import { logger } from '@/infra/logger.js';
 
 import { checkoutAndCreateBranch, remoteBranchExists } from '../git/git.service.js';
@@ -8,23 +10,19 @@ import { resolveIssueKey } from './flows/resolveIssueKey.flow.js';
 export const runFeatureFlow = async () => {
   const cliMode = getCliModeConfig();
 
-  const issueKey = await resolveIssueKey(cliMode);
-  const { commitLabel, slug } = await resolveBranchMeta(issueKey);
+  const [issueKey, baseBranch] = await Promise.all([
+    resolveIssueKey(cliMode),
+    remoteBranchExists('develop').then((exists) => (exists ? 'develop' : 'main')),
+  ]);
 
+  const { commitLabel, slug } = await resolveBranchMeta(issueKey);
   const branch = slug ? `${commitLabel}/${issueKey}-${slug}` : `${commitLabel}/${issueKey}`;
 
-  logger.info('Resolving base branch...');
+  logger.info(`\nCreating branch from ${chalk.bold(baseBranch)}...`);
 
   try {
-    const baseBranch = (await remoteBranchExists('develop')) ? 'develop' : 'main';
-
-    if (baseBranch === 'main') {
-      logger.info('No develop branch found, using main branch');
-    } else {
-      logger.info('Checking out develop and pulling latest changes...');
-    }
-
     await checkoutAndCreateBranch(baseBranch, branch);
+    logger.info(`\n✔ Ready: ${chalk.green.bold(branch)}\n`);
   } catch (error) {
     logger.error(`Git operation failed: ${(error as Error).message}`);
   }
