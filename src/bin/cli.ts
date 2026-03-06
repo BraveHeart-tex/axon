@@ -7,7 +7,6 @@ import { featureCommand } from '@/commands/feature.js';
 import { featureFlagCommand } from '@/commands/featureFlag.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
-import { searchCommitsCommand } from '@/commands/searchCommits.js';
 
 const program = new Command();
 
@@ -26,11 +25,6 @@ program
   .command('commit-ai')
   .description('Generate a commit message with AI')
   .action(commitAiCommand);
-
-program
-  .command('search-commits <jiraKey>')
-  .description('Search commits by JIRA issue key')
-  .action(searchCommitsCommand);
 
 program.command('config').description('Manage API keys securely').action(configCommand);
 
