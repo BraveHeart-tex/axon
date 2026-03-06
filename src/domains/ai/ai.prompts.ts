@@ -39,7 +39,11 @@ ${context.diff.slice(0, 6000)}
 ## Branch context
 - Branch: ${context.branchName}
 ${context.expectedType ? `- Inferred type: ${context.expectedType}` : ''}
-${context.inferredScope ? `- Inferred scope: ${context.inferredScope}` : ''}
+${
+  context.inferredScope
+    ? `- Scope: ${context.inferredScope} — YOU MUST use this as the commit scope, e.g. feat(${context.inferredScope}): ...`
+    : '- Scope: infer from diff or omit'
+}
 ${context.branchIntent ? `- Branch intent: ${context.branchIntent}` : ''}
 ${context.userHint ? `\n## My stated reason (use this as ground truth for the "why")\n${context.userHint}` : ''}
 

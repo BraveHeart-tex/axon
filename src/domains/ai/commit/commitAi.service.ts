@@ -18,10 +18,16 @@ export const generateMessage = async (
     messages: getCommitMessagePrompt(context),
   });
 
-  return raw
+  const base = raw
     .split('\n')[0]
     .replace(/^['"`]+|['"`]+$/g, '')
     .trim();
+
+  if (context.inferredScope && !base.includes(context.inferredScope)) {
+    return base.replace(/^(\w+):/, `$1(${context.inferredScope}):`);
+  }
+
+  return base;
 };
 
 const commitWithMessage = async (message: string): Promise<void> => {
@@ -39,7 +45,6 @@ export const runCommitAiFlow = async () => {
 
     let message = '';
 
-    // generation loop — regenerate until user accepts or quits
     while (true) {
       const spinner = ora('Generating commit message...').start();
 
