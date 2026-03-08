@@ -156,3 +156,11 @@ export const remoteBranchExists = async (branchName: string) => {
 
   return result.exitCode === 0;
 };
+
+export const abortCherryPick = async (): Promise<void> => {
+  try {
+    await execa('git', ['cherry-pick', '--abort'], { stdio: 'inherit' });
+  } catch (error) {
+    throw new Error(`Failed to abort cherry-pick: ${(error as Error).message}`);
+  }
+};
