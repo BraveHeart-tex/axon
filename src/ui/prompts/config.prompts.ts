@@ -33,3 +33,31 @@ export const promptApiKey = (name: string) =>
       message: `Enter API key for "${name}":`,
     },
   ]);
+
+export const promptConfigValue = async (
+  message: string,
+  validate?: (input: string) => boolean | string,
+) => {
+  const { value } = await inquirer.prompt<{ value: string }>([
+    {
+      type: 'input',
+      name: 'value',
+      message,
+      validate: validate ?? ((input) => input.length > 0),
+    },
+  ]);
+  return value;
+};
+
+export const promptSecretValue = async (message: string) => {
+  const { key } = await inquirer.prompt<{ key: string }>([
+    {
+      type: 'password',
+      name: 'key',
+      message,
+      mask: '*',
+      validate: (input) => input.length > 0,
+    },
+  ]);
+  return key;
+};

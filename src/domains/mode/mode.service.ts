@@ -1,4 +1,4 @@
-import { readConfig, writeConfig } from '@/infra/store/configStrore.js';
+import { readConfig, writeConfig } from '@/infra/store/configStore.js';
 
 import { CliMode } from './mode.types.js';
 

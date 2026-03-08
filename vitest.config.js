@@ -4,6 +4,7 @@ export default {
   test: {
     environment: 'node',
     clearMocks: true,
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
   resolve: {
     alias: {
