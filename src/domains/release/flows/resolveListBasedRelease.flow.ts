@@ -18,7 +18,7 @@ export const resolveListBasedRelease = async (
       name: 'selectedHashes',
       message: 'Select commits to cherry-pick:',
       pageSize: 10,
-      choices: recentCommits.map(formatCommitChoice),
+      choices: recentCommits.reverse().map(formatCommitChoice),
       validate: (input) => input.length > 0 || '❌ Select at least one commit.',
     },
   ]);
