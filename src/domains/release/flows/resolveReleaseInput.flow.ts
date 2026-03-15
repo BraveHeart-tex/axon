@@ -51,7 +51,7 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
       return resolveManualRelease();
     }
 
-    return resolveListBasedRelease(options, recentCommits);
+    return resolveListBasedRelease(recentCommits);
   } catch (err) {
     spinner.fail('Failed to fetch commits from develop.');
     throw err;

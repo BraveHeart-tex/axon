@@ -1,19 +1,54 @@
 import chalk from 'chalk';
 
-import { getScopeFromCommitMessage } from './git.service.js';
-import { RecentCommit } from './git.types.js';
+import type { RecentCommit } from './git.types.js';
+
+const TYPE_BADGE: Record<string, string> = {
+  feat: chalk.bgGreen.black(' FEAT '),
+  fix: chalk.bgRed.white(' FIX  '),
+  refactor: chalk.bgBlue.white(' RFCT '),
+  chore: chalk.bgGray.white(' CHRE '),
+  docs: chalk.bgCyan.black(' DOCS '),
+  test: chalk.bgYellow.black(' TEST '),
+  perf: chalk.bgMagenta.white(' PERF '),
+};
+
+const getTypeBadge = (message: string): string => {
+  const match = message.match(/^(\w+)[(:]/);
+  const type = match?.[1]?.toLowerCase() ?? '';
+  return TYPE_BADGE[type] ?? chalk.bgWhite.black(' MISC ');
+};
+
+const getScope = (message: string): string => {
+  const match = message.match(/^\w+\(([\w-]+)\)/);
+  return match?.[1] ?? '';
+};
+
+const getCleanMessage = (message: string): string => message.replace(/^\w+(\([\w-]+\))?!?:\s*/, '');
+
+const truncate = (str: string, max: number) =>
+  str.length > max ? `${str.slice(0, max - 1)}…` : str;
 
 export const formatCommitChoice = (commit: RecentCommit) => {
-  const hash = chalk.yellow(commit.hash);
-  const scope = chalk.green(`[${getScopeFromCommitMessage(commit.message)}]`);
-  const message = commit.message.length > 100 ? `${commit.message.slice(0, 100)}…` : commit.message;
+  const badge = getTypeBadge(commit.message);
+  const hash = chalk.dim.yellow(commit.hash.slice(0, 7));
+  const scope = getScope(commit.message);
 
-  const meta = chalk.gray(`${commit.author} • ${commit.date}`);
+  // Scope is the hero — padded to fixed width so columns align
+  const scopeTag = scope
+    ? chalk.cyan.bold(scope.toUpperCase().padEnd(14))
+    : chalk.dim('(no scope)    ');
+
+  const msg = chalk.dim(truncate(getCleanMessage(commit.message), 52));
+  const author = chalk.dim(truncate(commit.author ?? 'unknown', 16));
+  const date = chalk.dim(commit.date ?? '');
+
+  //  FIX   CLI-1234        message dimmed out...    hash  │  author · date
+  const name = `${badge}  ${scopeTag}  ${msg}  ${hash}  ${chalk.dim('│')}  ${author}  ${chalk.dim('·')}  ${date}`;
 
   return {
+    name,
     value: commit.hash,
-    short: commit.hash,
-    name: `${hash}  ${scope} ${message}\n     ${meta}`,
+    short: `${chalk.cyan(scope || commit.hash.slice(0, 7))} ${getCleanMessage(commit.message).slice(0, 50)}`,
   };
 };
 
