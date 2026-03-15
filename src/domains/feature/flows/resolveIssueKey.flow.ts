@@ -6,6 +6,8 @@ import { getJiraIssues } from '@/domains/jira/jira.service.js';
 import { CLI_MODES } from '@/domains/mode/mode.constants.js';
 import { logger } from '@/infra/logger.js';
 
+import { buildIssueChoices } from '../feature.formatter.js';
+
 export const resolveIssueKey = async (cliMode: string): Promise<string> => {
   if (cliMode !== CLI_MODES.JIRA) {
     return promptForIssueKey();
@@ -23,11 +25,9 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
     {
       type: 'list',
       name: 'issueKey',
-      message: 'Select an issue:',
-      choices: issues.map((issue) => ({
-        name: `${chalk.cyan(`[${issue.fields.status.name}]`)} ${chalk.bold(issue.key)} — ${issue.fields.summary}`,
-        value: issue.key,
-      })),
+      message: 'Select a Jira issue:',
+      pageSize: 12,
+      choices: buildIssueChoices(issues),
     },
   ]);
 
@@ -39,8 +39,8 @@ const promptForIssueKey = async (): Promise<string> => {
     {
       type: 'input',
       name: 'jiraCode',
-      message: 'Enter JIRA code (e.g., ORD-1325):',
-      validate: (input: string) => (JIRA_REGEX.test(input) ? true : '❌ Invalid JIRA code'),
+      message: `Enter JIRA issue key ${chalk.dim('(e.g. ORD-1325)')}:`,
+      validate: (input: string) => JIRA_REGEX.test(input) || '❌ Invalid JIRA code format',
     },
   ]);
 

@@ -1,5 +1,7 @@
 import chalk from 'chalk';
 
+import { truncate } from '@/misc/truncate.js';
+
 import type { RecentCommit } from './git.types.js';
 
 const TYPE_BADGE: Record<string, string> = {
@@ -24,9 +26,6 @@ const getScope = (message: string): string => {
 };
 
 const getCleanMessage = (message: string): string => message.replace(/^\w+(\([\w-]+\))?!?:\s*/, '');
-
-const truncate = (str: string, max: number) =>
-  str.length > max ? `${str.slice(0, max - 1)}…` : str;
 
 export const formatCommitChoice = (commit: RecentCommit) => {
   const badge = getTypeBadge(commit.message);
