@@ -7,10 +7,13 @@ import { featureCommand } from '@/commands/feature.js';
 import { featureFlagCommand } from '@/commands/featureFlag.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
+import { AXON_LOGO } from '@/misc/logo.js';
 
 const program = new Command();
 
 program.name('axon').description('Personal workflow assistant').version('1.0.0');
+
+program.addHelpText('before', AXON_LOGO);
 
 program
   .command('feature')
