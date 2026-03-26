@@ -1,36 +1,38 @@
+import { Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 
 import type { JiraIssue } from '@/domains/jira/jira.types.js';
 import { truncate } from '@/misc/truncate.js';
 
-const STATUS_BADGE: Record<string, string> = {
-  'In Progress': chalk.bgBlue.white(' IN PROG '),
-  'In Review': chalk.bgMagenta.white(' REVIEW  '),
-  'To Do': chalk.bgGray.white(' TO DO   '),
-  Done: chalk.bgGreen.black(' DONE    '),
-  Blocked: chalk.bgRed.white(' BLOCKED '),
+const STATUS_STYLES: Record<string, string> = {
+  'In Progress': chalk.blue.bold('● IN PROGRESS'),
+  'In Review': chalk.magenta.bold('● IN REVIEW  '),
+  'To Do': chalk.gray.bold('● TO DO      '),
+  Done: chalk.green.bold('● DONE       '),
+  Blocked: chalk.red.bold('● BLOCKED    '),
 };
 
 const STATUS_ORDER = ['Blocked', 'In Progress', 'In Review', 'To Do', 'Done'];
 
-const getStatusBadge = (status: string) =>
-  STATUS_BADGE[status] ?? chalk.bgWhite.black(` ${truncate(status, 7).padEnd(7)} `);
+const getStatusHeader = (status: string) =>
+  STATUS_STYLES[status] ?? chalk.white.bold(`● ${status.toUpperCase().padEnd(11)}`);
 
 const formatIssueChoice = (issue: JiraIssue) => {
-  const key = chalk.cyan.bold(issue.key.padEnd(10));
-  const summary = chalk.white(truncate(issue.fields.summary, 72));
+  const key = chalk.cyan(issue.key.padEnd(10));
+
+  const rawSummary = issue.fields.summary.trim();
+  const summary = chalk.white(truncate(rawSummary, 65));
 
   return {
-    name: `  ${key}  ${summary}`,
+    name: `    ${key}  ${summary}`,
     value: issue.key,
     short: chalk.cyan(issue.key),
   };
 };
 
 export const buildIssueChoices = (issues: JiraIssue[]) => {
-  // Group by status
   const groups = new Map<string, JiraIssue[]>();
+
   for (const issue of issues) {
     const name = issue.fields.status.name;
     if (!groups.has(name)) groups.set(name, []);
@@ -43,17 +45,16 @@ export const buildIssueChoices = (issues: JiraIssue[]) => {
     const group = groups.get(status);
     if (!group?.length) continue;
 
-    // Separator acts as a group header
     choices.push(
-      new inquirer.Separator(
-        `\n  ${getStatusBadge(status)}  ${chalk.dim(`${group.length} issue${group.length > 1 ? 's' : ''}`)}`,
-      ),
+      new Separator(`\n  ${getStatusHeader(status)}  ${chalk.dim(`(${group.length})`)}`),
     );
 
     for (const issue of group) {
       choices.push(formatIssueChoice(issue));
     }
   }
+
+  choices.push(new Separator(' '));
 
   return choices;
 };

@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import ora from 'ora';
 
 import { logger } from '@/infra/logger.js';
 
@@ -18,12 +19,17 @@ export const runFeatureFlow = async () => {
   const { commitLabel, slug } = await resolveBranchMeta(issueKey);
   const branch = slug ? `${commitLabel}/${issueKey}-${slug}` : `${commitLabel}/${issueKey}`;
 
-  logger.info(`\nCreating branch from ${chalk.bold(baseBranch)}...`);
+  console.log('');
+  const spinner = ora(`Creating branch from ${chalk.bold(baseBranch)}...`).start();
 
   try {
     await checkoutAndCreateBranch(baseBranch, branch);
-    logger.info(`\n✔ Ready: ${chalk.green.bold(branch)}\n`);
+
+    spinner.succeed(`Branch created successfully!`);
+
+    console.log(`\n  ${chalk.green('✔')} Ready: ${chalk.green.bold(branch)}\n`);
   } catch (error) {
-    logger.error(`Git operation failed: ${(error as Error).message}`);
+    spinner.fail(`Git operation failed.`);
+    logger.error((error as Error).message);
   }
 };
