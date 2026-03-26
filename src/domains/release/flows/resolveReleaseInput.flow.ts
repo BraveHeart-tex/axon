@@ -13,6 +13,22 @@ import { resolveListBasedRelease } from './resolveListBasedRelease.flow.js';
 import { resolveManualRelease } from './resolveManualRelease.flow.js';
 
 export const resolveReleaseInput = async (options: ReleaseOptions): Promise<ReleaseInput> => {
+  const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
+    {
+      type: 'list',
+      name: 'pickMethod',
+      message: 'How do you want to select commits?',
+      choices: [
+        { name: 'Select from recent commits', value: 'list' },
+        { name: 'Paste commit hashes manually', value: 'manual' },
+      ],
+    },
+  ]);
+
+  if (pickMethod === 'manual') {
+    return resolveManualRelease();
+  }
+
   const spinner = ora('Fetching recent commits from develop...').start();
 
   try {
@@ -33,22 +49,6 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
 
     if (recentCommits.length === 0) {
       throw new Error('No matching commits found.');
-    }
-
-    const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
-      {
-        type: 'list',
-        name: 'pickMethod',
-        message: 'How do you want to select commits?',
-        choices: [
-          { name: 'Select from recent commits', value: 'list' },
-          { name: 'Paste commit hashes manually', value: 'manual' },
-        ],
-      },
-    ]);
-
-    if (pickMethod === 'manual') {
-      return resolveManualRelease();
     }
 
     return resolveListBasedRelease(recentCommits);
