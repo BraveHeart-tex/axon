@@ -12,10 +12,15 @@ const program = new Command();
 
 program.name('axon').description('Personal workflow assistant').version('1.0.0');
 
-program.command('feature').description('Create a new feature branch').action(featureCommand);
+program
+  .command('feature')
+  .alias('f')
+  .description('Create a new feature branch')
+  .action(featureCommand);
 
 program
   .command('release')
+  .alias('r')
   .description('Create a release branch')
   .option('--only-unmerged', 'Only show unmerged commits')
   .option('--author <author>', 'Filter by author')
@@ -23,12 +28,17 @@ program
 
 program
   .command('commit-ai')
+  .alias('ca')
   .description('Generate a commit message with AI')
   .action(commitAiCommand);
 
 program.command('config').description('Manage API keys securely').action(configCommand);
 
-program.command('feature-flag').description('Add a feature flag').action(featureFlagCommand);
+program
+  .command('feature-flag')
+  .alias('ff')
+  .description('Add a feature flag')
+  .action(featureFlagCommand);
 
 program
   .command('mode')
