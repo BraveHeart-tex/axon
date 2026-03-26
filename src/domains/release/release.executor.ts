@@ -5,7 +5,7 @@ import ora from 'ora';
 import {
   abortCherryPick,
   checkoutBranch,
-  cherryPickCommit,
+  cherryPick,
   createBranch,
   createMergeRequestUrl,
   getRemoteOriginUrl,
@@ -50,7 +50,7 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
     const short = hash.slice(0, 7);
     const spinner = ora(`Picking ${chalk.yellow(short)}...`).start();
     try {
-      await cherryPickCommit(hash);
+      await cherryPick([hash]);
       spinner.succeed(`${chalk.yellow(short)} picked.`);
     } catch {
       spinner.fail(`${chalk.yellow(short)} failed — aborting cherry-pick.`);
@@ -89,7 +89,7 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
       return;
     }
 
-    const mergeRequestUrl = await createMergeRequestUrl({
+    const mergeRequestUrl = createMergeRequestUrl({
       remoteOriginUrl,
       sourceBranch: branchTitle,
       targetBranch: 'main',

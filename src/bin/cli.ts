@@ -8,6 +8,7 @@ import { featureFlagCommand } from '@/commands/featureFlag.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
 import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
+import { runSyncFlow } from '@/domains/release/sync/sync.flow.js';
 import { AXON_LOGO } from '@/misc/logo.js';
 
 const program = new Command();
@@ -58,6 +59,12 @@ program
   .action(async () => {
     await runHooksFlow();
   });
+
+program
+  .command('sync')
+  .alias('s')
+  .description('Sync fix commits from a release branch back to develop')
+  .action(runSyncFlow);
 
 program.parse(process.argv);
 

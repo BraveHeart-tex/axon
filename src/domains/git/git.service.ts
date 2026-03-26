@@ -89,8 +89,8 @@ export const getRecentCommitsForDevelop = async ({
   return formatCommits(stdout.split('\n'));
 };
 
-export const cherryPickCommit = async (commitHash: string) =>
-  execa('git', ['cherry-pick', commitHash], { stdio: 'inherit' });
+export const cherryPick = async (hashes: string[]) =>
+  execa('git', ['cherry-pick', ...hashes], { stdio: 'inherit' });
 
 export const getCurrentBranchName = async () => {
   const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -135,7 +135,7 @@ export const getRemoteOriginUrl = async () => {
   return stdout;
 };
 
-export const createMergeRequestUrl = async ({
+export const createMergeRequestUrl = ({
   remoteOriginUrl,
   sourceBranch,
   targetBranch,
@@ -171,4 +171,24 @@ export const commitWithMessage = async (message: string): Promise<void> => {
 
 export const pushCurrentBranch = async (): Promise<void> => {
   await execa('git', ['push'], { stdio: 'inherit' });
+};
+
+export const pushBranch = async (name: string) => {
+  await execa('git', ['push', '-u', 'origin', name]);
+};
+
+export const getRecentCommitsForBranch = async (
+  branch: string,
+  limit = 10,
+): Promise<RecentCommit[]> => {
+  // We want commits unique to this branch compared to develop
+  // Logic: git log develop..branch
+  const { stdout } = await execa('git', [
+    'log',
+    `develop..${branch}`,
+    `--max-count=${limit}`,
+    '--pretty=format:%h|%an|%ar|%s',
+  ]);
+
+  return formatCommits(stdout.split('\n').filter(Boolean));
 };
