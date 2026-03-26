@@ -7,6 +7,7 @@ import { featureCommand } from '@/commands/feature.js';
 import { featureFlagCommand } from '@/commands/featureFlag.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
+import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
 import { AXON_LOGO } from '@/misc/logo.js';
 
 const program = new Command();
@@ -50,11 +51,10 @@ program
   .action(modeCommand);
 
 program
-  .command('protect-release')
-  .description('Install git hooks to prevent amending on release branches')
+  .command('hooks')
+  .description('Preview and install suggested git hooks to ...')
   .action(async () => {
-    const { installHooks } = await import('@/commands/protect-release.js');
-    await installHooks();
+    await runHooksFlow();
   });
 
 program.parse(process.argv);
