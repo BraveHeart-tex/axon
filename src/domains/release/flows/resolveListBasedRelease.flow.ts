@@ -1,6 +1,5 @@
-import checkbox from '@inquirer/checkbox';
+import { checkbox, input } from '@inquirer/prompts';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 
 import { formatCommitChoice } from '@/domains/git/git.formatter.js';
 import { getScopeFromCommitMessage } from '@/domains/git/git.service.js';
@@ -15,15 +14,21 @@ export const resolveListBasedRelease = async (
 ): Promise<ReleaseInput> => {
   const selectedHashes = await checkbox({
     message: 'Select commits to cherry-pick:',
-    pageSize: 12,
+    pageSize: 15,
+    loop: false,
     choices: recentCommits.slice().reverse().map(formatCommitChoice),
     validate: (input) => input.length > 0 || '❌ Select at least one commit.',
     theme: {
-      icon: { cursor: '▶', checked: chalk.green('◉'), unchecked: chalk.dim('○') },
+      prefix: chalk.cyan('?'),
+      icon: {
+        cursor: chalk.cyan('❯'),
+        checked: chalk.green('◉'),
+        unchecked: chalk.dim('◯'),
+      },
       style: {
-        highlight: (text: string) => chalk.bgBlue.white(text),
+        highlight: (text: string) => chalk.cyan(text),
         renderSelectedChoices: (selected: Array<{ short: string }>) =>
-          chalk.green(`✔ ${selected.length} commit${selected.length !== 1 ? 's' : ''} selected`),
+          chalk.green(`${selected.length} commit(s) selected`),
       },
     },
   });
@@ -33,15 +38,11 @@ export const resolveListBasedRelease = async (
   const suggestedTitle =
     selectedCommits.length === 1 ? getScopeFromCommitMessage(selectedCommits[0]!.message) : '';
 
-  const { title } = await inquirer.prompt<{ title: string }>([
-    {
-      type: 'input',
-      name: 'title',
-      message: `Release branch name: ${chalk.cyan(`${BRANCH_PREFIX}/`)}`,
-      default: suggestedTitle,
-      validate: (input) => input.trim() !== '' || '❌ Title is required.',
-    },
-  ]);
+  const title = await input({
+    message: `Branch name (${chalk.dim(`${BRANCH_PREFIX}/`)}):`,
+    default: suggestedTitle,
+    validate: (val) => val.trim() !== '' || '❌ Title is required.',
+  });
 
   return {
     branchTitle: `${BRANCH_PREFIX}/${title.trim()}`,

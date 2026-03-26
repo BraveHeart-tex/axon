@@ -1,23 +1,37 @@
-import chalk from 'chalk';
+import chalk, { type ChalkInstance } from 'chalk';
 
 import { truncate } from '@/misc/truncate.js';
 
 import type { RecentCommit } from './git.types.js';
 
-const TYPE_BADGE: Record<string, string> = {
-  feat: chalk.bgGreen.black(' FEAT '),
-  fix: chalk.bgRed.white(' FIX  '),
-  refactor: chalk.bgBlue.white(' RFCT '),
-  chore: chalk.bgGray.white(' CHRE '),
-  docs: chalk.bgCyan.black(' DOCS '),
-  test: chalk.bgYellow.black(' TEST '),
-  perf: chalk.bgMagenta.white(' PERF '),
+const TYPE_COLORS: Record<string, ChalkInstance> = {
+  feat: chalk.green,
+  fix: chalk.red,
+  refactor: chalk.blue,
+  chore: chalk.gray,
+  docs: chalk.cyan,
+  test: chalk.yellow,
+  perf: chalk.magenta,
+};
+
+const SHORT_TYPES: Record<string, string> = {
+  feat: 'FEAT',
+  fix: 'FIX ',
+  refactor: 'RFCT',
+  chore: 'CHRE',
+  docs: 'DOCS',
+  test: 'TEST',
+  perf: 'PERF',
 };
 
 const getTypeBadge = (message: string): string => {
   const match = message.match(/^(\w+)[(:]/);
   const type = match?.[1]?.toLowerCase() ?? '';
-  return TYPE_BADGE[type] ?? chalk.bgWhite.black(' MISC ');
+
+  const text = SHORT_TYPES[type] ?? 'MISC';
+  const colorFn = TYPE_COLORS[type] ?? chalk.white;
+
+  return colorFn(text);
 };
 
 const getScope = (message: string): string => {
@@ -29,25 +43,30 @@ const getCleanMessage = (message: string): string => message.replace(/^\w+(\([\w
 
 export const formatCommitChoice = (commit: RecentCommit) => {
   const badge = getTypeBadge(commit.message);
-  const hash = chalk.dim.yellow(commit.hash.slice(0, 7));
-  const scope = getScope(commit.message);
 
-  // Scope is the hero — padded to fixed width so columns align
-  const scopeTag = scope
-    ? chalk.cyan.bold(scope.toUpperCase().padEnd(14))
+  const rawScope = getScope(commit.message);
+  const scopeTag = rawScope
+    ? chalk.cyan(rawScope.toUpperCase().padEnd(14)) // Switched bold off for cleaner look
     : chalk.dim('(no scope)    ');
 
-  const msg = chalk.dim(truncate(getCleanMessage(commit.message), 52));
-  const author = chalk.dim(truncate(commit.author ?? 'unknown', 16));
+  const rawMsg = getCleanMessage(commit.message);
+  const paddedMsg = truncate(rawMsg, 52).padEnd(52, ' ');
+  const msg = paddedMsg;
+
+  const hash = chalk.dim.yellow(commit.hash.slice(0, 7));
+
+  const rawAuthor = commit.author ?? 'unknown';
+  const paddedAuthor = truncate(rawAuthor, 14).padEnd(14, ' ');
+  const author = chalk.dim(paddedAuthor);
+
   const date = chalk.dim(commit.date ?? '');
 
-  //  FIX   CLI-1234        message dimmed out...    hash  │  author · date
   const name = `${badge}  ${scopeTag}  ${msg}  ${hash}  ${chalk.dim('│')}  ${author}  ${chalk.dim('·')}  ${date}`;
 
   return {
     name,
     value: commit.hash,
-    short: `${chalk.cyan(scope || commit.hash.slice(0, 7))} ${getCleanMessage(commit.message).slice(0, 50)}`,
+    short: `${chalk.cyan(rawScope || commit.hash.slice(0, 7))} ${rawMsg.slice(0, 50)}`,
   };
 };
 
