@@ -49,6 +49,14 @@ program
   .description('Set CLI mode')
   .action(modeCommand);
 
+program
+  .command('protect-release')
+  .description('Install git hooks to prevent amending on release branches')
+  .action(async () => {
+    const { installHooks } = await import('@/commands/protect-release.js');
+    await installHooks();
+  });
+
 program.parse(process.argv);
 
 let isInterrupting = false;
