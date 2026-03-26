@@ -1,7 +1,9 @@
-import { execa } from 'execa';
-import inquirer from 'inquirer';
+import { confirm, input, select } from '@inquirer/prompts';
+import chalk from 'chalk';
 import ora from 'ora';
+import readline from 'readline';
 
+import { commitWithMessage, pushCurrentBranch } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
 
 import { getCommitMessagePrompt } from '../ai.prompts.js';
@@ -9,39 +11,14 @@ import { generateAiResponse } from '../ai.service.js';
 import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
 import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';
 
-export const generateMessage = async (
-  apiKey: string,
-  context: Awaited<ReturnType<typeof resolveCommitContext>>,
-): Promise<string> => {
-  const raw = await generateAiResponse({
-    apiKey,
-    messages: getCommitMessagePrompt(context),
-  });
-
-  const base = raw
-    .split('\n')[0]
-    .replace(/^['"`]+|['"`]+$/g, '')
-    .trim();
-
-  if (context.inferredScope && !base.includes(context.inferredScope)) {
-    return base.replace(/^(\w+):/, `$1(${context.inferredScope}):`);
-  }
-
-  return base;
-};
-
-const commitWithMessage = async (message: string): Promise<void> => {
-  await execa('git', ['commit', '-m', message], { stdio: 'inherit' });
-};
-
-const pushCurrentBranch = async (): Promise<void> => {
-  await execa('git', ['push'], { stdio: 'inherit' });
-};
-
 export const runCommitAiFlow = async () => {
   try {
     const apiKey = await ensureAiApiKey();
     const context = await resolveCommitContext();
+
+    // State for making regenerate smarter
+    const rejectedMessages: string[] = [];
+    let userFeedback: string | undefined = undefined;
 
     let message = '';
 
@@ -49,7 +26,7 @@ export const runCommitAiFlow = async () => {
       const spinner = ora('Generating commit message...').start();
 
       try {
-        message = await generateMessage(apiKey, context);
+        message = await generateMessage(apiKey, context, rejectedMessages, userFeedback);
         spinner.stop();
       } catch (error) {
         spinner.fail('Generation failed');
@@ -58,21 +35,19 @@ export const runCommitAiFlow = async () => {
 
       logger.info(`\n  ${message}\n`, false);
 
-      const { action } = await inquirer.prompt<{
-        action: 'commit' | 'edit' | 'regenerate' | 'quit';
-      }>([
-        {
-          type: 'list',
-          name: 'action',
-          message: 'What would you like to do?',
-          choices: [
-            { name: 'Accept & commit', value: 'commit' },
-            { name: 'Edit message', value: 'edit' },
-            { name: 'Regenerate', value: 'regenerate' },
-            { name: 'Quit', value: 'quit' },
-          ],
+      const action = await select<'commit' | 'edit' | 'regenerate' | 'quit'>({
+        message: 'What would you like to do?',
+        choices: [
+          { name: 'Accept & commit', value: 'commit' },
+          { name: 'Edit message', value: 'edit' },
+          { name: 'Regenerate', value: 'regenerate' },
+          { name: 'Quit', value: 'quit' },
+        ],
+        theme: {
+          prefix: chalk.cyan('?'),
+          icon: { cursor: chalk.cyan('❯') },
         },
-      ]);
+      });
 
       if (action === 'quit') {
         logger.info('Aborted.', false);
@@ -80,35 +55,39 @@ export const runCommitAiFlow = async () => {
       }
 
       if (action === 'regenerate') {
+        rejectedMessages.push(message);
+
+        const hint = await input({
+          message: `Any specific instructions? ${chalk.dim('(Optional, press Enter to just try again)')}`,
+        });
+
+        userFeedback = hint.trim() || undefined;
+        console.log(''); // Visual padding
         continue;
       }
 
       if (action === 'edit') {
-        const { edited } = await inquirer.prompt<{ edited: string }>([
-          {
-            type: 'input',
-            name: 'edited',
-            message: 'Edit commit message:',
-            default: message,
-            validate: (input) => input.trim().length > 0 || 'Commit message cannot be empty.',
-          },
-        ]);
-        message = edited.trim();
+        const edited = await editMessageInline(
+          chalk.cyan('? ') + chalk.bold('Edit commit message: '),
+          message,
+        );
+
+        if (!edited) {
+          logger.error('Commit message cannot be empty.');
+          continue;
+        }
+        message = edited;
       }
 
       // commit
       await commitWithMessage(message);
       logger.info(`\n✔ Committed: ${message}\n`, false);
 
-      // offer to push
-      const { shouldPush } = await inquirer.prompt<{ shouldPush: boolean }>([
-        {
-          type: 'confirm',
-          name: 'shouldPush',
-          message: 'Push to remote?',
-          default: true,
-        },
-      ]);
+      const shouldPush = await confirm({
+        message: 'Push to remote?',
+        default: true,
+        theme: { prefix: chalk.cyan('?') },
+      });
 
       if (shouldPush) {
         const pushSpinner = ora('Pushing...').start();
@@ -127,3 +106,50 @@ export const runCommitAiFlow = async () => {
     logger.error(`Commit AI failed: ${error instanceof Error ? error.message : error}`);
   }
 };
+
+const generateMessage = async (
+  apiKey: string,
+  context: Awaited<ReturnType<typeof resolveCommitContext>>,
+  previousMessages: string[] = [],
+  feedback?: string,
+): Promise<string> => {
+  const raw = await generateAiResponse({
+    apiKey,
+    messages: getCommitMessagePrompt(context, previousMessages, feedback),
+  });
+
+  const base = raw
+    .split('\n')[0]
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .trim();
+
+  if (context.inferredScope && !base.includes(context.inferredScope)) {
+    return base.replace(/^(\w+):/, `$1(${context.inferredScope}):`);
+  }
+
+  return base;
+};
+
+const editMessageInline = (promptMsg: string, initialText: string): Promise<string> =>
+  new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: true,
+    });
+
+    // Handle Ctrl+C gracefully
+    rl.on('SIGINT', () => {
+      rl.close();
+      process.exit(0);
+    });
+
+    rl.setPrompt(promptMsg);
+    rl.prompt();
+    rl.write(initialText); // Puts the text directly into the editable buffer
+
+    rl.on('line', (line) => {
+      rl.close();
+      resolve(line.trim());
+    });
+  });

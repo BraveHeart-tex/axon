@@ -164,3 +164,11 @@ export const abortCherryPick = async (): Promise<void> => {
     throw new Error(`Failed to abort cherry-pick: ${(error as Error).message}`);
   }
 };
+
+export const commitWithMessage = async (message: string): Promise<void> => {
+  await execa('git', ['commit', '-m', message], { stdio: 'inherit' });
+};
+
+export const pushCurrentBranch = async (): Promise<void> => {
+  await execa('git', ['push'], { stdio: 'inherit' });
+};

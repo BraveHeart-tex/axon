@@ -1,7 +1,11 @@
 import { AiMessage } from './ai.service.js';
 import { CommitContext } from './commit/flows/resolveCommitContext.flow.js';
 
-export const getCommitMessagePrompt = (context: CommitContext): AiMessage[] => [
+export const getCommitMessagePrompt = (
+  context: CommitContext,
+  previousMessages: string[] = [],
+  feedback?: string,
+): AiMessage[] => [
   {
     role: 'system',
     content: `
@@ -46,6 +50,18 @@ ${
 }
 ${context.branchIntent ? `- Branch intent: ${context.branchIntent}` : ''}
 ${context.userHint ? `\n## My stated reason (use this as ground truth for the "why")\n${context.userHint}` : ''}
+
+${
+  previousMessages.length > 0
+    ? `\n## PREVIOUS ATTEMPTS (DO NOT REPEAT THESE)\n${previousMessages.map((m) => `- ${m}`).join('\n')}`
+    : ''
+}
+
+${
+  feedback
+    ? `\n## USER FEEDBACK FOR REGENERATION\nBased on the previous attempts, the user gave this instruction: "${feedback}". Follow this strictly.`
+    : ''
+}
 
 Write the commit message now.
     `.trim(),
