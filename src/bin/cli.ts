@@ -15,6 +15,7 @@ const program = new Command();
 program.name('axon').description('Personal workflow assistant').version('1.0.0');
 
 program.addHelpText('before', AXON_LOGO);
+program.addHelpText('afterAll', ' ');
 
 program
   .command('feature')

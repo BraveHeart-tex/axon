@@ -24,12 +24,18 @@ export const runHooksFlow = async () => {
     return;
   }
 
+  const installedIds = new Set(
+    HOOKS.filter((h) =>
+      isHookInstalled({
+        gitDir,
+        hookFile: h.hookFile,
+        hookId: h.id,
+      }),
+    ).map((h) => h.id),
+  );
+
   const choices = HOOKS.map((h) => {
-    const installed = isHookInstalled({
-      gitDir,
-      hookFile: h.hookFile,
-      hookId: h.id,
-    });
+    const installed = installedIds.has(h.id);
 
     return {
       name: installed ? `${h.name} ${chalk.dim('(installed)')}` : h.name,
@@ -51,31 +57,11 @@ export const runHooksFlow = async () => {
     },
   });
 
-  if (selectedHooks.length === 0) {
-    console.log(chalk.gray('No hooks selected. Exiting...'));
-    return;
-  }
-
   const selectedIds = selectedHooks.map((h) => h.id);
 
-  const toUninstall = HOOKS.filter((h) => {
-    const installed = isHookInstalled({
-      gitDir,
-      hookFile: h.hookFile,
-      hookId: h.id,
-    });
-    return installed && !selectedIds.includes(h.id);
-  });
+  const toUninstall = HOOKS.filter((h) => installedIds.has(h.id) && !selectedIds.includes(h.id));
 
-  // Determine what to Install (Selected but not installed)
-  const toInstall = selectedHooks.filter((h) => {
-    const installed = isHookInstalled({
-      gitDir,
-      hookFile: h.hookFile,
-      hookId: h.id,
-    });
-    return !installed;
-  });
+  const toInstall = selectedHooks.filter((h) => !installedIds.has(h.id));
 
   for (const hook of toUninstall) {
     removeHook({
@@ -94,6 +80,7 @@ export const runHooksFlow = async () => {
       id: hook.id,
       script: hook.script,
     });
+
     const finalContent =
       existing.length > 0 ? `${existing.trim()}\n${wrapped}` : `#!/bin/bash\n${wrapped}`;
 
