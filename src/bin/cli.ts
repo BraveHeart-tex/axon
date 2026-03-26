@@ -53,7 +53,7 @@ program
 
 program
   .command('hooks')
-  .description('Preview and install suggested git hooks to ...')
+  .description('Manage Git hooks to protect release branches and automate sync reminders')
   .action(async () => {
     await runHooksFlow();
   });
