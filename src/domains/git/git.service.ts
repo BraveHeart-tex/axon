@@ -135,20 +135,6 @@ export const getRemoteOriginUrl = async () => {
   return stdout;
 };
 
-export const createMergeRequestUrl = ({
-  remoteOriginUrl,
-  sourceBranch,
-  targetBranch,
-}: {
-  remoteOriginUrl: string;
-  sourceBranch: string;
-  targetBranch: string;
-}) => {
-  const baseUrl = remoteOriginUrl.replace(/\.git$/, '');
-  const mergeRequestUrl = `${baseUrl}/-/merge_requests/new?merge_request[source_branch]=${sourceBranch}&merge_request[target_branch]=${targetBranch}`;
-  return mergeRequestUrl;
-};
-
 export const remoteBranchExists = async (branchName: string) => {
   const result = await execa('git', ['ls-remote', '--exit-code', '--heads', 'origin', branchName], {
     reject: false,

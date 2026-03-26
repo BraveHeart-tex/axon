@@ -1,20 +1,18 @@
 import { checkbox, confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { execa } from 'execa';
 import ora from 'ora';
 
 import {
   checkoutBranch,
   cherryPick,
   createBranch,
-  createMergeRequestUrl,
   getCurrentBranchName,
   getRecentCommitsForBranch,
-  getRemoteOriginUrl,
   pullBranch,
   pushBranch,
 } from '@/domains/git/git.service.js';
 import { RecentCommit } from '@/domains/git/git.types.js';
+import { handleMrUrlGeneration } from '@/domains/mr/flows/mrUrl.flow.js';
 import { logger } from '@/infra/logger.js';
 
 export const runSyncFlow = async () => {
@@ -87,31 +85,7 @@ export const runSyncFlow = async () => {
 
     console.log(`\n  ${chalk.green('✔')} Done! Back on ${chalk.dim(currentBranch)}\n`);
 
-    // TODO: Extract this to a helper
-    // it's used in /src/domains/release/release.executor.ts too
-    const urlSpinner = ora('Fetching remote origin...').start();
-    try {
-      const remoteOriginUrl = await getRemoteOriginUrl();
-      const isGitlab = remoteOriginUrl && new URL(remoteOriginUrl).hostname === 'gitlab.com';
-      if (isGitlab) {
-        const syncMrUrl = createMergeRequestUrl({
-          remoteOriginUrl,
-          sourceBranch: finalBranchName,
-          targetBranch: 'develop',
-        });
-
-        urlSpinner.succeed('MR URL ready.');
-        console.log('');
-
-        await execa('bash', ['-c', `echo "${syncMrUrl}" | pbcopy`]);
-        logger.info(`Sync MR URL copied to clipboard:`);
-        console.log(chalk.cyan(`  ${syncMrUrl}`));
-        console.log('');
-      }
-    } catch (error) {
-      urlSpinner.fail('Failed to generate MR URL.');
-      console.error(error);
-    }
+    await handleMrUrlGeneration({ sourceBranch: finalBranchName, targetBranch: 'develop' });
 
     await checkoutBranch(currentBranch);
   } catch (error) {
