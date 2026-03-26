@@ -4,7 +4,12 @@ import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
 
-import { formatCodePane, HOOKS } from '@/domains/hooks/hooks.constants.js';
+import {
+  formatCodePane,
+  getHookMarkers,
+  HOOKS,
+  wrapScript,
+} from '@/domains/hooks/hooks.constants.js';
 
 export const runHooksFlow = async () => {
   console.log(chalk.cyan.bold('\n  Axon Hook Manager'));
@@ -20,7 +25,11 @@ export const runHooksFlow = async () => {
   }
 
   const choices = HOOKS.map((h) => {
-    const installed = isHookInstalled(gitDir, h.hookFile, h.id);
+    const installed = isHookInstalled({
+      gitDir,
+      hookFile: h.hookFile,
+      hookId: h.id,
+    });
 
     return {
       name: installed ? `${h.name} ${chalk.dim('(installed)')}` : h.name,
@@ -47,39 +56,92 @@ export const runHooksFlow = async () => {
     return;
   }
 
-  for (const hookDef of selectedHooks) {
-    const filePath = path.resolve(gitDir, hookDef.hookFile);
+  const selectedIds = selectedHooks.map((h) => h.id);
 
-    let existingContent = '';
-    if (fs.existsSync(filePath)) {
-      existingContent = fs.readFileSync(filePath, 'utf8');
-    }
+  const toUninstall = HOOKS.filter((h) => {
+    const installed = isHookInstalled({
+      gitDir,
+      hookFile: h.hookFile,
+      hookId: h.id,
+    });
+    return installed && !selectedIds.includes(h.id);
+  });
 
-    if (existingContent.includes(`# Axon: ${hookDef.id}`)) {
-      console.log(chalk.yellow(`⚠ Hook "${hookDef.name}" is already installed. Skipping.`));
-      continue;
-    }
+  // Determine what to Install (Selected but not installed)
+  const toInstall = selectedHooks.filter((h) => {
+    const installed = isHookInstalled({
+      gitDir,
+      hookFile: h.hookFile,
+      hookId: h.id,
+    });
+    return !installed;
+  });
 
-    // Append to existing file or create new with shebang
-    const finalContent =
-      existingContent.length > 0
-        ? `${existingContent.trim()}\n\n${hookDef.script}`
-        : `#!/bin/bash\n\n${hookDef.script}`;
-
-    fs.writeFileSync(filePath, finalContent, { mode: 0o755 });
-    console.log(`${chalk.green('✔')} Installed: ${chalk.bold(hookDef.name)}`);
+  for (const hook of toUninstall) {
+    removeHook({
+      gitDir,
+      hookFile: hook.hookFile,
+      hookId: hook.id,
+    });
+    console.log(`${chalk.red('✘')} Removed: ${chalk.bold(hook.name)}`);
   }
 
-  console.log(chalk.cyan('\n  Done! Your repository hooks are up to date.'));
+  for (const hook of toInstall) {
+    const filePath = path.resolve(gitDir, hook.hookFile);
+    const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+
+    const wrapped = wrapScript({
+      id: hook.id,
+      script: hook.script,
+    });
+    const finalContent =
+      existing.length > 0 ? `${existing.trim()}\n${wrapped}` : `#!/bin/bash\n${wrapped}`;
+
+    fs.writeFileSync(filePath, finalContent, { mode: 0o755 });
+    console.log(`${chalk.green('✔')} Installed: ${chalk.bold(hook.name)}`);
+  }
+
+  console.log(chalk.cyan('\n  Done! Your repository hooks are synchronized.'));
 };
 
-/**
- * Helper to check if a specific Axon hook is already present in the filesystem
- */
-const isHookInstalled = (gitDir: string, hookFile: string, hookId: string): boolean => {
+const isHookInstalled = ({
+  gitDir,
+  hookFile,
+  hookId,
+}: {
+  gitDir: string;
+  hookFile: string;
+  hookId: string;
+}): boolean => {
   const filePath = path.resolve(gitDir, hookFile);
   if (!fs.existsSync(filePath)) return false;
 
   const content = fs.readFileSync(filePath, 'utf8');
-  return content.includes(`# Axon: ${hookId}`);
+  const { start } = getHookMarkers(hookId);
+  return content.includes(start);
+};
+
+const removeHook = ({
+  gitDir,
+  hookFile,
+  hookId,
+}: {
+  gitDir: string;
+  hookFile: string;
+  hookId: string;
+}) => {
+  const filePath = path.resolve(gitDir, hookFile);
+  if (!fs.existsSync(filePath)) return;
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  const { start, end } = getHookMarkers(hookId);
+
+  const regex = new RegExp(`\\n?${start}[\\s\\S]*?${end}\\n?`, 'g');
+  const newContent = content.replace(regex, '').trim();
+
+  if (newContent === '#!/bin/bash' || newContent === '') {
+    fs.unlinkSync(filePath);
+  } else {
+    fs.writeFileSync(filePath, newContent, { mode: 0o755 });
+  }
 };

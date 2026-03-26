@@ -15,7 +15,6 @@ export const HOOKS: HookDefinition[] = [
     hookFile: 'prepare-commit-msg',
     description: 'Prevents "git commit --amend" on release/* branches.',
     script: `
-# Axon: block-amend
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 if [[ "$BRANCH_NAME" == release/* ]] && [ "$2" == "commit" ]; then
   echo -e "\\n\\033[31m[AXON] AMEND BLOCKED\\033[0m"
@@ -29,7 +28,6 @@ fi`.trim(),
     hookFile: 'post-commit',
     description: 'Reminds you to run "axon sync" after committing to release/.',
     script: `
-# Axon: suggest-sync
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 if [[ "$BRANCH_NAME" == release/* ]]; then
   echo -e "\\n\\033[36m[AXON] TIP\\033[0m"
@@ -46,4 +44,14 @@ export const formatCodePane = (script: string) => {
   const content = lines.map((line) => `${chalk.yellow('│')} ${chalk.dim(line)}`).join('\n');
 
   return `\n${header}\n${content}\n${footer}`;
+};
+
+export const getHookMarkers = (id: string) => ({
+  start: `# AXON_START: ${id}`,
+  end: `# AXON_END: ${id}`,
+});
+
+export const wrapScript = ({ id, script }: { id: string; script: string }) => {
+  const { start, end } = getHookMarkers(id);
+  return `\n${start}\n${script.trim()}\n${end}\n`;
 };
