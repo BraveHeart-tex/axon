@@ -1,5 +1,5 @@
 import { checkbox, confirm, input } from '@inquirer/prompts';
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import ora from 'ora';
 
 import {
@@ -36,15 +36,15 @@ export const runSyncFlow = async () => {
   }
 
   const selectedHashes = await checkbox({
-    message: `Select commits to sync back to ${chalk.bold('develop')}:`,
-    choices: recentCommits.map((c) => ({
-      name: `${chalk.yellow(c.hash.slice(0, 7))} ${c.message}`,
-      value: c.hash,
+    message: `Select commits to sync back to ${c.bold('develop')}:`,
+    choices: recentCommits.map((commit) => ({
+      name: `${c.yellow(commit.hash.slice(0, 7))} ${commit.message}`,
+      value: commit.hash,
     })),
     validate: (val) => val.length > 0 || 'Select at least one commit.',
     theme: {
-      icon: { cursor: chalk.cyan('❯'), checked: chalk.green('◉'), unchecked: chalk.dim('○') },
-      style: { highlight: (text: string) => chalk.cyan(text) },
+      icon: { cursor: c.cyan('❯'), checked: c.green('◉'), unchecked: c.dim('○') },
+      style: { highlight: (text: string) => c.cyan(text) },
     },
   });
 
@@ -68,22 +68,22 @@ export const runSyncFlow = async () => {
   const actionSpinner = ora().start();
 
   try {
-    actionSpinner.text = `Updating ${chalk.bold('develop')}...`;
+    actionSpinner.text = `Updating ${c.bold('develop')}...`;
     await checkoutBranch('develop');
     await pullBranch('develop');
 
-    actionSpinner.text = `Creating branch ${chalk.cyan(finalBranchName)}...`;
+    actionSpinner.text = `Creating branch ${c.cyan(finalBranchName)}...`;
     await createBranch(finalBranchName);
 
     actionSpinner.text = `Cherry-picking commits...`;
     await cherryPick(selectedHashes.reverse());
 
-    actionSpinner.text = `Pushing ${chalk.cyan(finalBranchName)}...`;
+    actionSpinner.text = `Pushing ${c.cyan(finalBranchName)}...`;
     await pushBranch(finalBranchName);
 
-    actionSpinner.succeed(`Successfully pushed ${chalk.green.bold(finalBranchName)}`);
+    actionSpinner.succeed(`Successfully pushed ${c.green.bold(finalBranchName)}`);
 
-    console.log(`\n  ${chalk.green('✔')} Done! Back on ${chalk.dim(currentBranch)}\n`);
+    console.log(`\n  ${c.green('✔')} Done! Back on ${c.dim(currentBranch)}\n`);
 
     await handleMrUrlGeneration({ sourceBranch: finalBranchName, targetBranch: 'develop' });
 
@@ -97,8 +97,8 @@ export const runSyncFlow = async () => {
 };
 
 const formatCommitLine = (hash: string, message?: string) => {
-  const shortHash = chalk.yellow(hash.slice(0, 7));
-  const msg = message ? chalk.white(message) : chalk.dim('(no message)');
+  const shortHash = c.yellow(hash.slice(0, 7));
+  const msg = message ? c.white(message) : c.dim('(no message)');
   return `  ${shortHash}  ${msg}`;
 };
 
@@ -107,11 +107,11 @@ const confirmSyncPlan = async (data: {
   hashes: string[];
   commits: RecentCommit[];
 }): Promise<boolean> => {
-  console.log('\n' + chalk.bold('  Sync Plan (Backport)'));
-  console.log(chalk.dim('  ─────────────────────────────────────'));
-  console.log(`  ${chalk.dim('Branch:')}  ${chalk.cyan(data.branchName)}`);
-  console.log(`  ${chalk.dim('Target:')}  ${chalk.cyan('develop')}`);
-  console.log(`  ${chalk.dim('Commits:')} ${chalk.white(data.hashes.length.toString())}`);
+  console.log('\n' + c.bold('  Sync Plan (Backport)'));
+  console.log(c.dim('  ─────────────────────────────────────'));
+  console.log(`  ${c.dim('Branch:')}  ${c.cyan(data.branchName)}`);
+  console.log(`  ${c.dim('Target:')}  ${c.cyan('develop')}`);
+  console.log(`  ${c.dim('Commits:')} ${c.white(data.hashes.length.toString())}`);
   console.log('');
 
   for (const hash of data.hashes) {
@@ -119,7 +119,7 @@ const confirmSyncPlan = async (data: {
     console.log(formatCommitLine(hash, commit?.message));
   }
 
-  console.log(chalk.dim('  ─────────────────────────────────────\n'));
+  console.log(c.dim('  ─────────────────────────────────────\n'));
 
   return await confirm({
     message: 'Proceed with this sync?',

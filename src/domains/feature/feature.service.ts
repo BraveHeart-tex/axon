@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import ora from 'ora';
 
 import { logger } from '@/infra/logger.js';
@@ -20,14 +20,14 @@ export const runFeatureFlow = async () => {
   const branch = slug ? `${commitLabel}/${issueKey}-${slug}` : `${commitLabel}/${issueKey}`;
 
   console.log('');
-  const spinner = ora(`Creating branch from ${chalk.bold(baseBranch)}...`).start();
+  const spinner = ora(`Creating branch from ${c.bold(baseBranch)}...`).start();
 
   try {
     await checkoutAndCreateBranch(baseBranch, branch);
 
     spinner.succeed(`Branch created successfully!`);
 
-    console.log(`\n  ${chalk.green('✔')} Ready: ${chalk.green.bold(branch)}\n`);
+    console.log(`\n  ${c.green('✔')} Ready: ${c.green.bold(branch)}\n`);
   } catch (error) {
     spinner.fail(`Git operation failed.`);
     logger.error((error as Error).message);

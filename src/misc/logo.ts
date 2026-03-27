@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 
 const rawLogo = [
   ' ',
@@ -13,10 +13,10 @@ const rawLogo = [
 
 export const AXON_LOGO = rawLogo
   .map((line) => {
-    const a = chalk.cyan(line.substring(0, 11)); // "A" segment
-    const x = chalk.blueBright(line.substring(11, 21)); // "X" segment
-    const o = chalk.cyan(line.substring(21, 31)); // "O" segment
-    const n = chalk.blueBright(line.substring(31)); // "N" segment
+    const a = c.cyan(line.substring(0, 11)); // "A" segment
+    const x = c.blueBright(line.substring(11, 21)); // "X" segment
+    const o = c.cyan(line.substring(21, 31)); // "O" segment
+    const n = c.blueBright(line.substring(31)); // "N" segment
 
     return a + x + o + n;
   })

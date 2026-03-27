@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import ora from 'ora';
 
 import { copyToClipboard } from '@/infra/clipboard.js';
@@ -37,7 +37,7 @@ export const handleMrUrlGeneration = async ({
 
     console.log('');
     logger.info(`MR URL:`);
-    console.log(chalk.cyan(`  ${mrUrl}`));
+    console.log(c.cyan(`  ${mrUrl}`));
     console.log('');
 
     return mrUrl;

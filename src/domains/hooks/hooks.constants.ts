@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 
 export interface HookDefinition {
   id: string;
@@ -38,10 +38,10 @@ fi`.trim(),
 
 export const formatCodePane = (script: string) => {
   const lines = script.split('\n');
-  const header = chalk.yellow('┌─── Source Code Preview ──────────────────────────');
-  const footer = chalk.yellow('└──────────────────────────────────────────────────');
+  const header = c.yellow('┌─── Source Code Preview ──────────────────────────');
+  const footer = c.yellow('└──────────────────────────────────────────────────');
 
-  const content = lines.map((line) => `${chalk.yellow('│')} ${chalk.dim(line)}`).join('\n');
+  const content = lines.map((line) => `${c.yellow('│')} ${c.dim(line)}`).join('\n');
 
   return `\n${header}\n${content}\n${footer}`;
 };

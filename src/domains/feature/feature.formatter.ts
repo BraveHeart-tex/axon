@@ -1,32 +1,32 @@
 import { Separator } from '@inquirer/prompts';
-import chalk from 'chalk';
+import c from 'ansi-colors';
 
 import type { JiraIssue } from '@/domains/jira/jira.types.js';
 import { truncate } from '@/misc/truncate.js';
 
 const STATUS_STYLES: Record<string, string> = {
-  'In Progress': chalk.blue.bold('● IN PROGRESS'),
-  'In Review': chalk.magenta.bold('● IN REVIEW  '),
-  'To Do': chalk.gray.bold('● TO DO      '),
-  Done: chalk.green.bold('● DONE       '),
-  Blocked: chalk.red.bold('● BLOCKED    '),
+  'In Progress': c.blue.bold('● IN PROGRESS'),
+  'In Review': c.magenta.bold('● IN REVIEW  '),
+  'To Do': c.gray.bold('● TO DO      '),
+  Done: c.green.bold('● DONE       '),
+  Blocked: c.red.bold('● BLOCKED    '),
 };
 
 const STATUS_ORDER = ['Blocked', 'In Progress', 'In Review', 'To Do', 'Done'];
 
 const getStatusHeader = (status: string) =>
-  STATUS_STYLES[status] ?? chalk.white.bold(`● ${status.toUpperCase().padEnd(11)}`);
+  STATUS_STYLES[status] ?? c.white.bold(`● ${status.toUpperCase().padEnd(11)}`);
 
 const formatIssueChoice = (issue: JiraIssue) => {
-  const key = chalk.cyan(issue.key.padEnd(10));
+  const key = c.cyan(issue.key.padEnd(10));
 
   const rawSummary = issue.fields.summary.trim();
-  const summary = chalk.white(truncate(rawSummary, 65));
+  const summary = c.white(truncate(rawSummary, 65));
 
   return {
     name: `    ${key}  ${summary}`,
     value: issue.key,
-    short: chalk.cyan(issue.key),
+    short: c.cyan(issue.key),
   };
 };
 
@@ -45,9 +45,7 @@ export const buildIssueChoices = (issues: JiraIssue[]) => {
     const group = groups.get(status);
     if (!group?.length) continue;
 
-    choices.push(
-      new Separator(`\n  ${getStatusHeader(status)}  ${chalk.dim(`(${group.length})`)}`),
-    );
+    choices.push(new Separator(`\n  ${getStatusHeader(status)}  ${c.dim(`(${group.length})`)}`));
 
     for (const issue of group) {
       choices.push(formatIssueChoice(issue));

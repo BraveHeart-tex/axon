@@ -1,5 +1,5 @@
 import { checkbox } from '@inquirer/prompts';
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
@@ -12,15 +12,15 @@ import {
 } from '@/domains/hooks/hooks.constants.js';
 
 export const runHooksFlow = async () => {
-  console.log(chalk.cyan.bold('\n  Axon Hook Manager'));
-  console.log(chalk.dim('  Select hooks to install. Use arrows to preview code.\n'));
+  console.log(c.cyan.bold('\n  Axon Hook Manager'));
+  console.log(c.dim('  Select hooks to install. Use arrows to preview code.\n'));
 
   let gitDir: string;
   try {
     const { stdout } = await execa('git', ['rev-parse', '--git-path', 'hooks']);
     gitDir = stdout.trim();
   } catch (err) {
-    console.log(chalk.red('❌ Not a git repository or git not found.', err));
+    console.log(c.red('❌ Not a git repository or git not found.'), err);
     return;
   }
 
@@ -38,10 +38,10 @@ export const runHooksFlow = async () => {
     const installed = installedIds.has(h.id);
 
     return {
-      name: installed ? `${h.name} ${chalk.dim('(installed)')}` : h.name,
+      name: installed ? `${h.name} ${c.dim('(installed)')}` : h.name,
       value: h,
       checked: installed,
-      description: `${chalk.white(h.description)}\n${formatCodePane(h.script)}`,
+      description: `${c.white(h.description)}\n${formatCodePane(h.script)}`,
     };
   });
 
@@ -50,9 +50,9 @@ export const runHooksFlow = async () => {
     choices,
     theme: {
       style: {
-        highlight: (text: string) => chalk.cyan(text),
+        highlight: (text: string) => c.cyan(text),
         renderSelectedChoices: (selected: unknown[]) =>
-          chalk.green(`${selected.length} hook(s) selected`),
+          c.green(`${selected.length} hook(s) selected`),
       },
     },
   });
@@ -69,7 +69,7 @@ export const runHooksFlow = async () => {
       hookFile: hook.hookFile,
       hookId: hook.id,
     });
-    console.log(`${chalk.red('✘')} Removed: ${chalk.bold(hook.name)}`);
+    console.log(`${c.red('✘')} Removed: ${c.bold(hook.name)}`);
   }
 
   for (const hook of toInstall) {
@@ -85,10 +85,10 @@ export const runHooksFlow = async () => {
       existing.length > 0 ? `${existing.trim()}\n${wrapped}` : `#!/bin/bash\n${wrapped}`;
 
     fs.writeFileSync(filePath, finalContent, { mode: 0o755 });
-    console.log(`${chalk.green('✔')} Installed: ${chalk.bold(hook.name)}`);
+    console.log(`${c.green('✔')} Installed: ${c.bold(hook.name)}`);
   }
 
-  console.log(chalk.cyan('\n  Done! Your repository hooks are synchronized.'));
+  console.log(c.cyan('\n  Done! Your repository hooks are synchronized.'));
 };
 
 const isHookInstalled = ({

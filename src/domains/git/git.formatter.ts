@@ -1,17 +1,17 @@
-import chalk, { type ChalkInstance } from 'chalk';
+import c from 'ansi-colors';
 
 import { truncate } from '@/misc/truncate.js';
 
 import type { RecentCommit } from './git.types.js';
 
-const TYPE_COLORS: Record<string, ChalkInstance> = {
-  feat: chalk.green,
-  fix: chalk.red,
-  refactor: chalk.blue,
-  chore: chalk.gray,
-  docs: chalk.cyan,
-  test: chalk.yellow,
-  perf: chalk.magenta,
+const TYPE_COLORS: Record<string, c.StyleFunction> = {
+  feat: c.green,
+  fix: c.red,
+  refactor: c.blue,
+  chore: c.gray,
+  docs: c.cyan,
+  test: c.yellow,
+  perf: c.magenta,
 };
 
 const SHORT_TYPES: Record<string, string> = {
@@ -29,7 +29,7 @@ const getTypeBadge = (message: string): string => {
   const type = match?.[1]?.toLowerCase() ?? '';
 
   const text = SHORT_TYPES[type] ?? 'MISC';
-  const colorFn = TYPE_COLORS[type] ?? chalk.white;
+  const colorFn = TYPE_COLORS[type] ?? c.white;
 
   return colorFn(text);
 };
@@ -46,27 +46,27 @@ export const formatCommitChoice = (commit: RecentCommit) => {
 
   const rawScope = getScope(commit.message);
   const scopeTag = rawScope
-    ? chalk.cyan(rawScope.toUpperCase().padEnd(14)) // Switched bold off for cleaner look
-    : chalk.dim('(no scope)    ');
+    ? c.cyan(rawScope.toUpperCase().padEnd(14)) // Switched bold off for cleaner look
+    : c.dim('(no scope)    ');
 
   const rawMsg = getCleanMessage(commit.message);
   const paddedMsg = truncate(rawMsg, 52).padEnd(52, ' ');
   const msg = paddedMsg;
 
-  const hash = chalk.dim.yellow(commit.hash.slice(0, 7));
+  const hash = c.dim.yellow(commit.hash.slice(0, 7));
 
   const rawAuthor = commit.author ?? 'unknown';
   const paddedAuthor = truncate(rawAuthor, 14).padEnd(14, ' ');
-  const author = chalk.dim(paddedAuthor);
+  const author = c.dim(paddedAuthor);
 
-  const date = chalk.dim(commit.date ?? '');
+  const date = c.dim(commit.date ?? '');
 
-  const name = `${badge}  ${scopeTag}  ${msg}  ${hash}  ${chalk.dim('│')}  ${author}  ${chalk.dim('·')}  ${date}`;
+  const name = `${badge}  ${scopeTag}  ${msg}  ${hash}  ${c.dim('│')}  ${author}  ${c.dim('·')}  ${date}`;
 
   return {
     name,
     value: commit.hash,
-    short: `${chalk.cyan(rawScope || commit.hash.slice(0, 7))} ${rawMsg.slice(0, 50)}`,
+    short: `${c.cyan(rawScope || commit.hash.slice(0, 7))} ${rawMsg.slice(0, 50)}`,
   };
 };
 

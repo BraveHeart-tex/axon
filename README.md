@@ -158,7 +158,7 @@ src/
 
 - **AI Integration**: `@ai-sdk/groq`, `ai`
 - **CLI Framework**: `commander`
-- **User Interface**: `inquirer`, `ora`, `chalk`
+- **User Interface**: `inquirer`, `ora`, `ansi-colors`
 - **Git Operations**: `execa`
 - **Security**: `keytar` (for secure credential storage)
 - **Development**: TypeScript, ESLint, Prettier, Husky

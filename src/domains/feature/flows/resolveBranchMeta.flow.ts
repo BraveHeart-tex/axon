@@ -1,10 +1,10 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import inquirer from 'inquirer';
 
 import { COMMIT_LABELS } from '../feature.constants.js';
 
 export const resolveBranchMeta = async (issueKey: string) => {
-  const issueContext = chalk.dim(`  Issue: ${chalk.bold(issueKey)}`);
+  const issueContext = c.dim(`  Issue: ${c.bold(issueKey)}`);
 
   const { commitLabel, shortDesc } = await inquirer.prompt<{
     commitLabel: string;

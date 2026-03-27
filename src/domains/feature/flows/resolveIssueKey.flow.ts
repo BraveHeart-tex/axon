@@ -1,5 +1,5 @@
 import { input, select } from '@inquirer/prompts';
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import ora from 'ora';
 
 import { JIRA_REGEX } from '@/domains/jira/jira.constants.js';
@@ -29,10 +29,10 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
     loop: false,
     choices: buildIssueChoices(issues),
     theme: {
-      prefix: chalk.cyan('?'),
-      icon: { cursor: chalk.cyan('❯') },
+      prefix: c.cyan('?'),
+      icon: { cursor: c.cyan('❯') },
       style: {
-        highlight: (text: string) => chalk.cyan(text),
+        highlight: (text: string) => c.cyan.bold(text),
       },
     },
   });
@@ -42,6 +42,6 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
 
 const promptForIssueKey = async (): Promise<string> =>
   await input({
-    message: `Enter JIRA issue key ${chalk.dim('(e.g. ORD-1325)')}:`,
+    message: `Enter JIRA issue key ${c.dim('(e.g. ORD-1325)')}:`,
     validate: (val: string) => JIRA_REGEX.test(val) || '❌ Invalid JIRA code format',
   });

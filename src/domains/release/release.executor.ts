@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import ora from 'ora';
 
 import {
@@ -28,10 +28,10 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
   }
 
   // --- Create release branch ---
-  const branchSpinner = ora(`Creating branch ${chalk.cyan(branchTitle)}...`).start();
+  const branchSpinner = ora(`Creating branch ${c.cyan(branchTitle)}...`).start();
   try {
     await createBranch(branchTitle);
-    branchSpinner.succeed(`Branch ${chalk.cyan(branchTitle)} created.`);
+    branchSpinner.succeed(`Branch ${c.cyan(branchTitle)} created.`);
   } catch (err) {
     branchSpinner.fail(`Failed to create branch ${branchTitle}.`);
     throw err;
@@ -46,12 +46,12 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
 
   for (const hash of commits) {
     const short = hash.slice(0, 7);
-    const spinner = ora(`Picking ${chalk.yellow(short)}...`).start();
+    const spinner = ora(`Picking ${c.yellow(short)}...`).start();
     try {
       await cherryPick([hash]);
-      spinner.succeed(`${chalk.yellow(short)} picked.`);
+      spinner.succeed(`${c.yellow(short)} picked.`);
     } catch {
-      spinner.fail(`${chalk.yellow(short)} failed — aborting cherry-pick.`);
+      spinner.fail(`${c.yellow(short)} failed — aborting cherry-pick.`);
       failed.push(hash);
       try {
         await abortCherryPick();
@@ -68,7 +68,7 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
 
   if (failed.length > 0) {
     logger.error(
-      `Cherry-pick failed on ${chalk.yellow(failed[0]!.slice(0, 7))}. Release branch left at last successful commit.`,
+      `Cherry-pick failed on ${c.yellow(failed[0]!.slice(0, 7))}. Release branch left at last successful commit.`,
     );
     logger.warn(`Fix the conflict and re-run, or cherry-pick the remaining commits manually.`);
     return;

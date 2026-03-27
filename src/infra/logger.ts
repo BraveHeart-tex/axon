@@ -1,10 +1,10 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 
 const color = {
-  info: chalk.hex('#00BFFF'), // bright blue, readable on dark & light
-  success: chalk.hex('#00C851'), // vivid green, not neon
-  warn: chalk.hex('#FF8800'), // orange—visible everywhere
-  error: chalk.hex('#FF4444'), // bright red, solid contrast
+  info: c.blueBright,
+  success: c.greenBright,
+  warn: c.yellowBright,
+  error: c.redBright,
 };
 
 export const logger = {

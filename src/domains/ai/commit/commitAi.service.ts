@@ -1,5 +1,5 @@
 import { confirm, input, select } from '@inquirer/prompts';
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import ora from 'ora';
 import readline from 'readline';
 
@@ -44,8 +44,11 @@ export const runCommitAiFlow = async () => {
           { name: 'Quit', value: 'quit' },
         ],
         theme: {
-          prefix: chalk.cyan('?'),
-          icon: { cursor: chalk.cyan('❯') },
+          prefix: c.cyan('?'),
+          icon: { cursor: c.cyan('❯') },
+          style: {
+            highlight: (text: string) => c.cyan.bold(text),
+          },
         },
       });
 
@@ -58,7 +61,7 @@ export const runCommitAiFlow = async () => {
         rejectedMessages.push(message);
 
         const hint = await input({
-          message: `Any specific instructions? ${chalk.dim('(Optional, press Enter to just try again)')}`,
+          message: `Any specific instructions? ${c.dim('(Optional, press Enter to just try again)')}`,
         });
 
         userFeedback = hint.trim() || undefined;
@@ -68,7 +71,7 @@ export const runCommitAiFlow = async () => {
 
       if (action === 'edit') {
         const edited = await editMessageInline(
-          chalk.cyan('? ') + chalk.bold('Edit commit message: '),
+          c.cyan('? ') + c.bold('Edit commit message: '),
           message,
         );
 
@@ -86,7 +89,7 @@ export const runCommitAiFlow = async () => {
       const shouldPush = await confirm({
         message: 'Push to remote?',
         default: true,
-        theme: { prefix: chalk.cyan('?') },
+        theme: { prefix: c.cyan('?') },
       });
 
       if (shouldPush) {

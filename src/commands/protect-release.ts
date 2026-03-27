@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import c from 'ansi-colors';
 import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
@@ -21,8 +21,8 @@ fi
 
     fs.writeFileSync(hookPath, hookScript, { mode: 0o755 });
 
-    console.log(`${chalk.green('✔')} Axon protection hooks installed in this repository.`);
+    console.log(`${c.green('✔')} Axon protection hooks installed in this repository.`);
   } catch {
-    console.error(chalk.red('Failed to install hooks. Are you in a git repository?'));
+    console.error(c.red('Failed to install hooks. Are you in a git repository?'));
   }
 };
