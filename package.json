@@ -23,8 +23,6 @@
   },
   "dependencies": {
     "@ai-sdk/groq": "2.0.22",
-    "@inquirer/checkbox": "5.1.0",
-    "@inquirer/input": "5.0.10",
     "@inquirer/prompts": "8.3.2",
     "ai": "5.0.28",
     "ansi-colors": "4.1.3",
