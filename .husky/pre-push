@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+build_branch="${BUILD_BRANCH:-main}"
+
+if [ "$current_branch" = "$build_branch" ]; then
+  echo "Pushing to $current_branch - starting async build..."
+
+  (
+    sleep 1
+    repo_root=$(git rev-parse --show-toplevel) || exit 1
+    git_dir=$(git rev-parse --git-dir) || exit 1
+
+    cd "$repo_root" || exit 1
+    yarn build >"$git_dir/async-build.log" 2>&1
+  ) &
+
+  exit 0
+fi
+
+echo "Pushing to ${current_branch:-detached HEAD} - skipping async build"
