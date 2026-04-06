@@ -16,9 +16,9 @@ export const HOOKS: HookDefinition[] = [
     description: 'Prevents "git commit --amend" on release/* branches.',
     script: `
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH_NAME" == release/* ]] && [ "$2" == "commit" ]; then
-  echo -e "\\n\\033[31m[AXON] AMEND BLOCKED\\033[0m"
-  echo -e "Please create a new commit instead.\\n"
+if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ] && [ "\${2:-}" = "commit" ]; then
+  printf "\\n\\033[31m[AXON] AMEND BLOCKED\\033[0m\\n"
+  printf "Please create a new commit instead.\\n\\n"
   exit 1
 fi`.trim(),
   },
@@ -29,9 +29,9 @@ fi`.trim(),
     description: 'Reminds you to run "axon sync" after committing to release/.',
     script: `
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH_NAME" == release/* ]]; then
-  echo -e "\\n\\033[36m[AXON] TIP\\033[0m"
-  echo -e "Run \\033[1;32maxon sync\\033[0m to backport this fix.\\n"
+if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ]; then
+  printf "\\n\\033[36m[AXON] TIP\\033[0m\\n"
+  printf "Run \\033[1;32maxon sync\\033[0m to backport this fix.\\n\\n"
 fi`.trim(),
   },
 ];
