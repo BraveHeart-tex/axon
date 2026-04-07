@@ -68,7 +68,7 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
 
   if (failed.length > 0) {
     logger.error(
-      `Cherry-pick failed on ${c.yellow(failed[0]!.slice(0, 7))}. Release branch left at last successful commit.`,
+      `Cherry-pick failed on ${c.yellow(failed[0]!.slice(0, 7))} . Release branch left at last successful commit.`,
     );
     logger.warn(`Fix the conflict and re-run, or cherry-pick the remaining commits manually.`);
     return;
