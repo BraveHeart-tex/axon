@@ -54,7 +54,7 @@ export const resolveListBasedRelease = async (
 
   return {
     branchTitle: `${BRANCH_PREFIX}/${title.trim()}`,
-    commits: selectedHashes,
+    commits: selectedCommits.map((commit) => commit.hash),
     recentCommits: selectedCommits,
   };
 };
