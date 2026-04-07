@@ -16,7 +16,7 @@ export const resolveListBasedRelease = async (
     message: 'Select commits to cherry-pick:',
     pageSize: 15,
     loop: false,
-    choices: recentCommits.slice().reverse().map(formatCommitChoice),
+    choices: recentCommits.map(formatCommitChoice),
     validate: (input) => input.length > 0 || '❌ Select at least one commit.',
     theme: {
       prefix: c.cyan('?'),
