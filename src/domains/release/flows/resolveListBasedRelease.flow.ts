@@ -38,8 +38,13 @@ export const resolveListBasedRelease = async (
     .slice()
     .reverse();
 
+  const selectedScopes = selectedCommits
+    .map((commit) => getScopeFromCommitMessage(commit.message))
+    .filter((scope) => scope !== '');
   const suggestedTitle =
-    selectedCommits.length === 1 ? getScopeFromCommitMessage(selectedCommits[0]!.message) : '';
+    selectedScopes.length === selectedCommits.length && new Set(selectedScopes).size === 1
+      ? selectedScopes[0]!
+      : '';
 
   const title = await input({
     message: `Branch name (${c.dim(`${BRANCH_PREFIX}/`)}):`,
