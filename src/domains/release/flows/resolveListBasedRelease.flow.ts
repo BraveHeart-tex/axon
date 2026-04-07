@@ -33,7 +33,10 @@ export const resolveListBasedRelease = async (
     },
   });
 
-  const selectedCommits = recentCommits.filter((c) => selectedHashes.includes(c.hash));
+  const selectedCommits = recentCommits
+    .filter((c) => selectedHashes.includes(c.hash))
+    .slice()
+    .reverse();
 
   const suggestedTitle =
     selectedCommits.length === 1 ? getScopeFromCommitMessage(selectedCommits[0]!.message) : '';
