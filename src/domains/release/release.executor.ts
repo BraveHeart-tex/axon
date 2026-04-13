@@ -6,9 +6,12 @@ import {
   checkoutBranch,
   cherryPick,
   createBranch,
+  deleteLocalBranch,
+  localBranchExists,
   pullBranch,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
+import { promptRecreateReleaseBranch } from '@/ui/prompts/release.prompts.js';
 
 import { handleMrUrlGeneration } from '../mr/flows/mrUrl.flow.js';
 import type { ReleasePlan } from './release.types.js';
@@ -28,12 +31,32 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
   }
 
   // --- Create release branch ---
-  const branchSpinner = ora(`Creating branch ${c.cyan(branchTitle)}...`).start();
+  const branchExists = await localBranchExists(branchTitle);
+
+  if (branchExists) {
+    const shouldRecreateBranch = await promptRecreateReleaseBranch(branchTitle);
+
+    if (!shouldRecreateBranch) {
+      logger.info('Release aborted.');
+      return;
+    }
+  }
+
+  const branchSpinner = ora(
+    `${branchExists ? 'Recreating' : 'Creating'} branch ${c.cyan(branchTitle)}...`,
+  ).start();
+
   try {
+    if (branchExists) {
+      await deleteLocalBranch(branchTitle);
+    }
+
     await createBranch(branchTitle);
-    branchSpinner.succeed(`Branch ${c.cyan(branchTitle)} created.`);
+    branchSpinner.succeed(
+      `Branch ${c.cyan(branchTitle)} ${branchExists ? 'recreated' : 'created'}.`,
+    );
   } catch (err) {
-    branchSpinner.fail(`Failed to create branch ${branchTitle}.`);
+    branchSpinner.fail(`Failed to ${branchExists ? 'recreate' : 'create'} branch ${branchTitle}.`);
     throw err;
   }
 

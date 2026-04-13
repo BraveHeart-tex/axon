@@ -28,6 +28,20 @@ export const createBranch = async (branch: string) => {
   }
 };
 
+export const localBranchExists = async (branch: string) => {
+  const result = await execa('git', ['branch', '--list', branch], { reject: false });
+
+  return result.stdout.trim().length > 0;
+};
+
+export const deleteLocalBranch = async (branch: string) => {
+  try {
+    await execa('git', ['branch', '-D', branch], { stdio: 'inherit' });
+  } catch (error) {
+    throw new Error(`Failed to delete branch ${branch}: ${(error as Error).message}`);
+  }
+};
+
 export const checkoutAndCreateBranch = async (base: string, newBranch: string) => {
   await checkoutBranch(base);
   await pullBranch(base);
