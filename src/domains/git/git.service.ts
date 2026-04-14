@@ -86,9 +86,44 @@ export const getRecentCommitsForDevelop = async ({
   onlyUnmerged: boolean;
   author: string;
 }): Promise<RecentCommit[]> => {
+  if (onlyUnmerged) {
+    // Get candidate commits from develop not in main (by SHA)
+    const { stdout: developStdout } = await execa('git', [
+      'log',
+      'main...develop',
+      '--right-only',
+      '--no-merges',
+      '--pretty=format:%h|%an|%ad|%s',
+      '--date=relative',
+      '-n',
+      String(limit),
+      ...(author ? ['--author', author] : []),
+    ]);
+
+    if (developStdout === '') return [];
+
+    // Get all commit subjects from main for filtering
+    const { stdout: mainStdout } = await execa('git', [
+      'log',
+      'main',
+      '--no-merges',
+      '--pretty=format:%s',
+    ]);
+
+    const mainSubjects = new Set(mainStdout.split('\n').filter(Boolean));
+
+    // Keep only commits whose subject doesn't exist in main
+    const filtered = developStdout.split('\n').filter((line) => {
+      const subject = line.split('|').slice(3).join('|'); // handle pipes in subject
+      return !mainSubjects.has(subject);
+    });
+
+    return filtered.length ? formatCommits(filtered) : [];
+  }
+
   const { stdout } = await execa('git', [
     'log',
-    onlyUnmerged ? 'main..develop' : 'develop',
+    'develop',
     '--pretty=format:%h|%an|%ad|%s',
     '--date=relative',
     '-n',
@@ -96,10 +131,7 @@ export const getRecentCommitsForDevelop = async ({
     ...(author ? ['--author', author] : []),
   ]);
 
-  if (stdout === '') {
-    return [];
-  }
-
+  if (stdout === '') return [];
   return formatCommits(stdout.split('\n'));
 };
 
