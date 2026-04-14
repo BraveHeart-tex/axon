@@ -1,9 +1,9 @@
-import { checkbox, input } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import c from 'ansi-colors';
 
-import { formatCommitChoice } from '@/domains/git/git.formatter.js';
 import { getScopeFromCommitMessage } from '@/domains/git/git.service.js';
 import type { RecentCommit } from '@/domains/git/git.types.js';
+import { promptSearchableCommitCheckbox } from '@/ui/prompts/commit.prompts.js';
 
 import type { ReleaseInput } from '../release.types.js';
 
@@ -12,25 +12,11 @@ const BRANCH_PREFIX = 'release';
 export const resolveListBasedRelease = async (
   recentCommits: RecentCommit[],
 ): Promise<ReleaseInput> => {
-  const selectedHashes = await checkbox({
+  const selectedHashes = await promptSearchableCommitCheckbox({
+    commits: recentCommits,
     message: 'Select commits to cherry-pick:',
     pageSize: 15,
-    loop: false,
-    choices: recentCommits.map(formatCommitChoice),
-    validate: (input) => input.length > 0 || '❌ Select at least one commit.',
-    theme: {
-      prefix: c.cyan('?'),
-      icon: {
-        cursor: c.cyan('❯'),
-        checked: c.green('◉'),
-        unchecked: c.dim('◯'),
-      },
-      style: {
-        highlight: (text: string) => c.cyan(text),
-        renderSelectedChoices: (selected: Array<{ short: string }>) =>
-          c.green(`${selected.length} commit(s) selected`),
-      },
-    },
+    requiredMessage: '❌ Select at least one commit.',
   });
 
   const selectedCommits = recentCommits

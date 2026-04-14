@@ -1,4 +1,4 @@
-import { checkbox, confirm, input } from '@inquirer/prompts';
+import { confirm, input } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import ora from 'ora';
 
@@ -14,6 +14,7 @@ import {
 import { RecentCommit } from '@/domains/git/git.types.js';
 import { handleMrUrlGeneration } from '@/domains/mr/flows/mrUrl.flow.js';
 import { logger } from '@/infra/logger.js';
+import { promptSearchableCommitCheckbox } from '@/ui/prompts/commit.prompts.js';
 
 export const runSyncFlow = async () => {
   const currentBranch = await getCurrentBranchName();
@@ -35,17 +36,10 @@ export const runSyncFlow = async () => {
     return;
   }
 
-  const selectedHashes = await checkbox({
+  const selectedHashes = await promptSearchableCommitCheckbox({
+    commits: recentCommits,
     message: `Select commits to sync back to ${c.bold('develop')}:`,
-    choices: recentCommits.map((commit) => ({
-      name: `${c.yellow(commit.hash.slice(0, 7))} ${commit.message}`,
-      value: commit.hash,
-    })),
-    validate: (val) => val.length > 0 || 'Select at least one commit.',
-    theme: {
-      icon: { cursor: c.cyan('❯'), checked: c.green('◉'), unchecked: c.dim('○') },
-      style: { highlight: (text: string) => c.cyan(text) },
-    },
+    requiredMessage: 'Select at least one commit.',
   });
 
   const finalBranchName = await input({
