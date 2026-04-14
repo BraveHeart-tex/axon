@@ -31,8 +31,6 @@
     "inquirer": "12.9.6",
     "keytar": "7.9.0",
     "ora": "9.0.0",
-    "ts-morph": "27.0.2",
-    "yaml": "^2.8.2",
     "zod": "4.1.11"
   },
   "devDependencies": {

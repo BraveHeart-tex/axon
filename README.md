@@ -138,7 +138,6 @@ src/
 │   ├── commitAi.ts        # AI commit message generation
 │   ├── config.ts          # API key configuration
 │   ├── feature.ts         # Feature branch creation
-│   ├── featureFlag.ts     # Feature flag management
 │   ├── release.ts         # Release branch creation
 │   ├── reviewAi.ts        # AI code review
 │   └── searchCommits.ts   # Commit search functionality

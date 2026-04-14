@@ -4,7 +4,6 @@ import { Command } from 'commander';
 import { commitAiCommand } from '@/commands/commitAi.js';
 import { configCommand } from '@/commands/config.js';
 import { featureCommand } from '@/commands/feature.js';
-import { featureFlagCommand } from '@/commands/featureFlag.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
 import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
@@ -39,12 +38,6 @@ program
   .action(commitAiCommand);
 
 program.command('config').description('Manage API keys securely').action(configCommand);
-
-program
-  .command('feature-flag')
-  .alias('ff')
-  .description('Add a feature flag')
-  .action(featureFlagCommand);
 
 program
   .command('mode')

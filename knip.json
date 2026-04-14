@@ -4,6 +4,5 @@
     "interface": true,
     "type": true
   },
-  "ignoreDependencies": ["@vitest/coverage-v8"],
   "tags": ["-lintignore"]
 }

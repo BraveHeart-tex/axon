@@ -70,18 +70,6 @@ export const formatCommitChoice = (commit: RecentCommit) => {
   };
 };
 
-export const parseGitLog = (stdout: string) =>
-  stdout
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const [hash, ...msgParts] = line.trim().split(' ');
-      return {
-        hash,
-        message: msgParts.join(' '),
-      };
-    });
-
 export const formatCommits = (commitLines: string[]) =>
   commitLines.map((line) => {
     const [hash, author, date, ...messageParts] = line.split('|');
