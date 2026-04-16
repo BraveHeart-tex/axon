@@ -3,7 +3,7 @@ import { generateText } from 'ai';
 
 const createAiModel = (apiKey: string) => {
   const groq = createGroq({ apiKey });
-  return groq('llama-3.1-8b-instant');
+  return groq('llama-3.3-70b-versatile');
 };
 
 export interface AiMessage {
