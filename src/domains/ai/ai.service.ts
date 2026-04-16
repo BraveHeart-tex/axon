@@ -3,7 +3,7 @@ import { generateText } from 'ai';
 
 const createAiModel = (apiKey: string) => {
   const groq = createGroq({ apiKey });
-  return groq('moonshotai/kimi-k2-instruct-0905');
+  return groq('llama-3.1-8b-instant');
 };
 
 export interface AiMessage {
