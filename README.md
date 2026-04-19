@@ -7,11 +7,9 @@ Axon is a command-line tool I built to automate my daily development workflows. 
 ## Features
 
 - **AI-Powered Commit Messages**: Generate meaningful commit messages using AI based on your staged changes
-- **Code Review Assistant**: Get AI-powered code reviews for your changes
 - **Branch Management**: Create feature and release branches with proper naming conventions
-- **Commit Search**: Search commits by JIRA issue keys
-- **Feature Flags**: Add feature flags to your codebase
-- **Secure Configuration**: Store API keys securely using your system's credential manager
+- **Backport Bracnh Flows**: Sync commits between main and develop branches
+- **Secure Configuration**: Store API keys securely using your system's credential
 
 ## Installation
 
@@ -70,21 +68,6 @@ Create a meaningful commit message based on your staged changes:
 axon commit-ai
 ```
 
-### AI Code Review
-
-Get a code review for your changes:
-
-```bash
-# Review current staged changes
-axon review-ai
-
-# Review specific diff
-axon review-ai --diff "your diff content"
-
-# Review diff from file
-axon review-ai --diff-file path/to/diff.txt
-```
-
 ### Branch Management
 
 #### Create Feature Branch
@@ -103,22 +86,6 @@ Create a new release branch:
 axon release
 ```
 
-### Search Commits
-
-Search commits by JIRA issue key:
-
-```bash
-axon search-commits PROJ-123
-```
-
-### Feature Flags
-
-Add a feature flag to your codebase:
-
-```bash
-axon feature-flag
-```
-
 ## Development
 
 ### Scripts
@@ -135,12 +102,9 @@ src/
 ├── bin/
 │   └── cli.ts              # Main CLI entry point
 ├── commands/               # Command implementations
-│   ├── commitAi.ts        # AI commit message generation
 │   ├── config.ts          # API key configuration
 │   ├── feature.ts         # Feature branch creation
 │   ├── release.ts         # Release branch creation
-│   ├── reviewAi.ts        # AI code review
-│   └── searchCommits.ts   # Commit search functionality
 ├── constants/             # Constants and prompts
 │   ├── config.ts          # Configuration constants
 │   ├── jira.ts            # JIRA-related constants
@@ -170,10 +134,6 @@ src/
 4. Commit your changes: `git commit -m 'Add some amazing feature'`
 5. Push to the branch: `git push origin feature/amazing-feature`
 6. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## AI Models
 
