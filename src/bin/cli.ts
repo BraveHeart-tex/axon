@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 
+import { aiModelCommand } from '@/commands/aiModel.js';
 import { commitAiCommand } from '@/commands/commitAi.js';
 import { configCommand } from '@/commands/config.js';
 import { featureCommand } from '@/commands/feature.js';
@@ -36,6 +37,14 @@ program
   .alias('ca')
   .description('Generate a commit message with AI')
   .action(commitAiCommand);
+
+program
+  .command('ai-model')
+  .description('View or set the default AI model')
+  .argument('[model]', 'Model ID to save as the default')
+  .option('--list', 'List supported AI models')
+  .option('--clear', 'Clear the saved AI model')
+  .action(aiModelCommand);
 
 program.command('config').description('Manage API keys securely').action(configCommand);
 

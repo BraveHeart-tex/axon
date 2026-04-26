@@ -10,7 +10,9 @@ export const getCommitMessagePrompt = (
     role: 'system',
     content: `
 You are an expert developer writing Conventional Commit messages.
-Your job is to describe WHY a change exists or WHAT problem it solves — never WHAT the code does.
+Write the strongest commit subject you can from imperfect evidence.
+Prefer developer intent or user impact over mechanical code descriptions.
+If the true "why" is not stated, describe the most meaningful outcome of the change.
 
 ## Rules
 - Output ONLY the commit message — no explanation, no markdown, no quotes, no preamble
@@ -19,7 +21,12 @@ Your job is to describe WHY a change exists or WHAT problem it solves — never 
 - Active voice, present tense
 - Format: type(scope): summary  or  type: summary
 - Valid types: feat, fix, refactor, docs, chore, test, perf
-- Infer scope from the diff (omit if unclear)
+- Prefer the provided commit type/scope hints when present
+
+## Decision order
+1. Treat the user's stated reason as ground truth when provided
+2. Otherwise use branch intent and inferred commit type as the main clue
+3. Use the diff to refine the summary, not to mechanically narrate code edits
 
 ## Anti-patterns — never produce these
 - refactor: update prompt formatting              ← describes code, not outcome
@@ -42,14 +49,14 @@ ${context.diff.slice(0, 6000)}
 
 ## Branch context
 - Branch: ${context.branchName}
-${context.expectedType ? `- Inferred type: ${context.expectedType}` : ''}
+${context.expectedType ? `- Inferred type: ${context.expectedType} — prefer this unless clearly wrong` : ''}
 ${
   context.inferredScope
     ? `- Scope: ${context.inferredScope} — YOU MUST use this as the commit scope, e.g. feat(${context.inferredScope}): ...`
     : '- Scope: infer from diff or omit'
 }
 ${context.branchIntent ? `- Branch intent: ${context.branchIntent}` : ''}
-${context.userHint ? `\n## My stated reason (use this as ground truth for the "why")\n${context.userHint}` : ''}
+${context.userHint ? `\n## My stated reason\n${context.userHint}` : '\n## My stated reason\nNot provided'}
 
 ${
   previousMessages.length > 0

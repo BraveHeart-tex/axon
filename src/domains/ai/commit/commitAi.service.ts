@@ -8,6 +8,7 @@ import { logger } from '@/infra/logger.js';
 
 import { getCommitMessagePrompt } from '../ai.prompts.js';
 import { generateAiResponse } from '../ai.service.js';
+import { normalizeGeneratedCommitMessage } from './commitMessageFormatter.js';
 import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
 import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';
 
@@ -119,18 +120,13 @@ const generateMessage = async (
   const raw = await generateAiResponse({
     apiKey,
     messages: getCommitMessagePrompt(context, previousMessages, feedback),
+    options: {
+      maxOutputTokens: 80,
+      temperature: 0.6,
+    },
   });
 
-  const base = raw
-    .split('\n')[0]
-    .replace(/^['"`]+|['"`]+$/g, '')
-    .trim();
-
-  if (context.inferredScope && !base.includes(context.inferredScope)) {
-    return base.replace(/^(\w+):/, `$1(${context.inferredScope}):`);
-  }
-
-  return base;
+  return normalizeGeneratedCommitMessage(raw, context);
 };
 
 const editMessageInline = (promptMsg: string, initialText: string): Promise<string> =>

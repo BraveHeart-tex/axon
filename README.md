@@ -58,6 +58,20 @@ axon config
 
 This will securely store your API key using your system's credential manager.
 
+Set or inspect the default AI model:
+
+```bash
+axon ai-model --list
+axon ai-model meta-llama/llama-4-scout-17b-16e-instruct
+axon ai-model
+```
+
+For one-off tests, you can override the saved model with an environment variable:
+
+```bash
+AXON_AI_MODEL=qwen/qwen3-32b axon commit-ai
+```
+
 ## Usage
 
 ### Generate AI Commit Message
