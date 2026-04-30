@@ -46,7 +46,7 @@ program
   .option('--clear', 'Clear the saved AI model')
   .action(aiModelCommand);
 
-program.command('config').description('Manage API keys securely').action(configCommand);
+program.command('config').description('Manage saved settings and API keys').action(configCommand);
 
 program
   .command('mode')

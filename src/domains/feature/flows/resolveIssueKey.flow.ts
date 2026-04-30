@@ -17,7 +17,7 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
   const issues = await getJiraIssues();
 
   if (issues.length === 0) {
-    spinner.warn('No Jira issues found. Please enter the issue key manually.');
+    spinner.warn('No Jira issues matched your saved JQL. Please enter the issue key manually.');
     return promptForIssueKey();
   }
 

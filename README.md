@@ -58,6 +58,13 @@ axon config
 
 This will securely store your API key using your system's credential manager.
 
+The same config command also manages saved Jira settings used by `axon feature`,
+including the JQL query used to fetch selectable issues:
+
+```bash
+axon config
+```
+
 Set or inspect the default AI model:
 
 ```bash

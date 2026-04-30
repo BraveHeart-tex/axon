@@ -1,9 +1,14 @@
 import inquirer from 'inquirer';
 
-import { CREDENTIAL_KEYS } from '@/domains/config/config.constants.js';
-import { CredentialKey } from '@/domains/config/config.types.js';
+import {
+  CONFIG_SETTING_KEYS,
+  CONFIG_SETTING_LABELS,
+  CREDENTIAL_KEYS,
+} from '@/domains/config/config.constants.js';
+import { ConfigSettingKey, CredentialKey } from '@/domains/config/config.types.js';
 
 export type ConfigAction = 'set' | 'view' | 'delete' | 'list';
+export type ConfigTarget = 'setting' | 'credential';
 
 export const promptConfigAction = () =>
   inquirer.prompt<{ action: ConfigAction }>([
@@ -15,6 +20,19 @@ export const promptConfigAction = () =>
     },
   ]);
 
+export const promptConfigTarget = () =>
+  inquirer.prompt<{ target: ConfigTarget }>([
+    {
+      type: 'list',
+      name: 'target',
+      message: 'What do you want to manage?',
+      choices: [
+        { name: 'Saved settings', value: 'setting' },
+        { name: 'API keys', value: 'credential' },
+      ],
+    },
+  ]);
+
 export const promptCredentialName = () =>
   inquirer.prompt<{ name: CredentialKey }>([
     {
@@ -22,6 +40,19 @@ export const promptCredentialName = () =>
       name: 'name',
       message: 'Select credential:',
       choices: Object.values(CREDENTIAL_KEYS),
+    },
+  ]);
+
+export const promptConfigSettingName = () =>
+  inquirer.prompt<{ name: ConfigSettingKey }>([
+    {
+      type: 'list',
+      name: 'name',
+      message: 'Select setting:',
+      choices: Object.values(CONFIG_SETTING_KEYS).map((key) => ({
+        name: CONFIG_SETTING_LABELS[key],
+        value: key,
+      })),
     },
   ]);
 
