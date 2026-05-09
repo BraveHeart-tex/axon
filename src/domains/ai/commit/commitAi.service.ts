@@ -120,10 +120,6 @@ const generateMessage = async (
   const raw = await generateAiResponse({
     apiKey,
     messages: getCommitMessagePrompt(context, previousMessages, feedback),
-    options: {
-      maxOutputTokens: 80,
-      temperature: 0.6,
-    },
   });
 
   return normalizeGeneratedCommitMessage(raw, context);

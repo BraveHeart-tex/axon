@@ -16,12 +16,13 @@ If the true "why" is not stated, describe the most meaningful outcome of the cha
 
 ## Rules
 - Output ONLY the commit message — no explanation, no markdown, no quotes, no preamble
-- Single line, max 72 characters
+- Single line, max 100 characters
 - No trailing punctuation
 - Active voice, present tense
 - Format: type(scope): summary  or  type: summary
 - Valid types: feat, fix, refactor, docs, chore, test, perf
 - Prefer the provided commit type/scope hints when present
+- Be specific enough that a teammate can understand the actual outcome without opening the diff
 
 ## Decision order
 1. Treat the user's stated reason as ground truth when provided
@@ -39,6 +40,9 @@ If the true "why" is not stated, describe the most meaningful outcome of the cha
 - feat(auth): allow users to stay logged in across browser sessions
 - fix(upload): prevent silent failures when file exceeds size limit
 - perf(api): eliminate redundant DB calls on every request
+
+Before answering, compare a few possible subjects and choose the one that best captures the
+developer-facing outcome. Do not mention this comparison in the answer.
     `.trim(),
   },
   {

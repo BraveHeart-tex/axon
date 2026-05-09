@@ -21,7 +21,7 @@ test('falls back to inferred type when the model omits the prefix', () => {
   assert.equal(message, 'fix: Prevent duplicate uploads');
 });
 
-test('trims quotes, punctuation, and extra length', () => {
+test('trims quotes, punctuation, and keeps useful length', () => {
   const message = normalizeGeneratedCommitMessage(
     '"refactor: improve AI message generation quality and reduce repetition."',
     {
@@ -30,5 +30,23 @@ test('trims quotes, punctuation, and extra length', () => {
     },
   );
 
-  assert.equal(message, 'refactor(AXN-123): improve AI message generation quality and reduce');
+  assert.equal(
+    message,
+    'refactor(AXN-123): improve AI message generation quality and reduce repetition',
+  );
+});
+
+test('does not leave dangling connective words after truncation', () => {
+  const message = normalizeGeneratedCommitMessage(
+    'fix: improve generated commit suggestions for staged changes and branch context',
+    {
+      expectedType: 'fix',
+      inferredScope: 'LONG-SCOPE-1234567890',
+    },
+  );
+
+  assert.equal(
+    message,
+    'fix(LONG-SCOPE-1234567890): improve generated commit suggestions for staged changes',
+  );
 });

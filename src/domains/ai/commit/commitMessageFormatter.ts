@@ -2,7 +2,22 @@ import { CommitContext } from './flows/resolveCommitContext.flow.js';
 
 const CONVENTIONAL_PREFIX = /^(feat|fix|refactor|docs|chore|test|perf)(?:\(([^)]+)\))?:\s*(.+)$/i;
 const DEFAULT_COMMIT_TYPE = 'chore';
-const MAX_COMMIT_LENGTH = 72;
+const MAX_COMMIT_LENGTH = 100;
+const DANGLING_TRAILING_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'as',
+  'for',
+  'from',
+  'in',
+  'of',
+  'on',
+  'or',
+  'the',
+  'to',
+  'with',
+]);
 
 interface ParsedCommit {
   type: string;
@@ -46,7 +61,15 @@ const truncateSummary = (summary: string, prefix: string): string => {
     return truncated;
   }
 
-  return truncated.slice(0, lastSpace).trim();
+  const words = truncated.slice(0, lastSpace).trim().split(' ');
+  while (words.length > 1) {
+    const lastWord = words[words.length - 1]?.toLowerCase();
+    if (!lastWord || !DANGLING_TRAILING_WORDS.has(lastWord)) break;
+
+    words.pop();
+  }
+
+  return words.join(' ');
 };
 
 const formatCommit = ({ type, scope, summary }: ParsedCommit): string => {

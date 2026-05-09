@@ -14,26 +14,17 @@ export interface AiMessage {
   content: string;
 }
 
-export interface AiGenerationOptions {
-  maxOutputTokens?: number;
-  temperature?: number;
-}
-
 export const generateAiResponse = async ({
   apiKey,
   messages,
-  options,
 }: {
   apiKey: string;
   messages: AiMessage[];
-  options?: AiGenerationOptions;
 }): Promise<string> => {
   const model = createAiModel(apiKey);
   const { text } = await generateText({
     model,
     messages,
-    maxOutputTokens: options?.maxOutputTokens ?? 120,
-    temperature: options?.temperature ?? 0.2,
   });
   return text.trim();
 };
