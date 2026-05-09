@@ -21,7 +21,8 @@
     "knip": "knip"
   },
   "resolutions": {
-    "brace-expansion": "1.1.13"
+    "brace-expansion": "1.1.13",
+    "fast-uri": "3.1.2"
   },
   "dependencies": {
     "@ai-sdk/groq": "2.0.22",
