@@ -7,6 +7,7 @@ import { configCommand } from '@/commands/config.js';
 import { featureCommand } from '@/commands/feature.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
+import { syncBranchCommand } from '@/commands/syncBranch.js';
 import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
 import { runSyncFlow } from '@/domains/release/sync/sync.flow.js';
 import { AXON_LOGO } from '@/misc/logo.js';
@@ -67,6 +68,13 @@ program
   .alias('s')
   .description('Sync fix commits from a release branch back to develop')
   .action(runSyncFlow);
+
+program
+  .command('sync-branch')
+  .alias('sb')
+  .argument('[target]', 'Remote target branch to rebase onto', 'develop')
+  .description('Rebase the current branch onto origin/<target> and push with --force-with-lease')
+  .action(syncBranchCommand);
 
 program.parse(process.argv);
 

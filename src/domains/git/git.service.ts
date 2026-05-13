@@ -143,8 +143,28 @@ export const getCurrentBranchName = async () => {
   return stdout;
 };
 
+export const getCurrentBranchNameForWorktree = async () => {
+  const { stdout } = await execa('git', ['branch', '--show-current']);
+  return stdout.trim();
+};
+
 export const fetchRemote = async (branchName: string) => {
   await execa('git', ['fetch', branchName], { stdio: 'inherit' });
+};
+
+export const fetchOriginPrune = async () => {
+  await execa('git', ['fetch', 'origin', '--prune'], { stdio: 'inherit' });
+};
+
+export const isWorkingTreeDirty = async () => {
+  const unstagedChanges = await execa('git', ['diff', '--quiet'], { reject: false });
+  const stagedChanges = await execa('git', ['diff', '--cached', '--quiet'], { reject: false });
+
+  return unstagedChanges.exitCode !== 0 || stagedChanges.exitCode !== 0;
+};
+
+export const rebaseOntoRemoteBranch = async (branchName: string) => {
+  await execa('git', ['rebase', `origin/${branchName}`], { stdio: 'inherit' });
 };
 
 export const inferJiraScopeFromBranch = (branch: string) => {
@@ -191,6 +211,10 @@ export const commitWithMessage = async (message: string): Promise<void> => {
 
 export const pushCurrentBranch = async (): Promise<void> => {
   await execa('git', ['push'], { stdio: 'inherit' });
+};
+
+export const pushCurrentBranchWithLease = async (): Promise<void> => {
+  await execa('git', ['push', '--force-with-lease'], { stdio: 'inherit' });
 };
 
 export const pushBranch = async (name: string) => {
