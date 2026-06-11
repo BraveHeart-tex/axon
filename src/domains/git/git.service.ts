@@ -197,6 +197,16 @@ export const remoteBranchExists = async (branchName: string) => {
   return result.exitCode === 0;
 };
 
+export const getMergeBase = async (ref1: string, ref2: string): Promise<string> => {
+  const result = await execa('git', ['merge-base', ref1, ref2], { reject: false });
+  return result.exitCode === 0 ? result.stdout.trim() : '';
+};
+
+export const countCommitsBetween = async (from: string, to: string): Promise<number> => {
+  const result = await execa('git', ['rev-list', '--count', `${from}..${to}`], { reject: false });
+  return result.exitCode === 0 ? Number(result.stdout.trim()) || 0 : 0;
+};
+
 export const abortCherryPick = async (): Promise<void> => {
   try {
     await execa('git', ['cherry-pick', '--abort'], { stdio: 'inherit' });

@@ -72,8 +72,11 @@ program
 program
   .command('sync-branch')
   .alias('sb')
-  .argument('[target]', 'Remote target branch to rebase onto', 'develop')
-  .description('Rebase the current branch onto origin/<target> and push with --force-with-lease')
+  .argument('[target]', 'Remote target branch to rebase onto (auto-detected if omitted)')
+  .description(
+    'Rebase the current branch onto origin/<target> and push with --force-with-lease. ' +
+      'When <target> is omitted, the base branch is auto-detected and offered as a default.',
+  )
   .action(syncBranchCommand);
 
 program.parse(process.argv);

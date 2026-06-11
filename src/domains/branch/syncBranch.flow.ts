@@ -6,10 +6,13 @@ import {
   isWorkingTreeDirty,
   pushCurrentBranchWithLease,
   rebaseOntoRemoteBranch,
+  remoteBranchExists,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
 
-export const runSyncBranchFlow = async (target = 'develop') => {
+import { resolveSyncTarget } from './resolveSyncTarget.flow.js';
+
+export const runSyncBranchFlow = async (target?: string) => {
   try {
     await syncBranch(target);
   } catch (error) {
@@ -18,15 +21,7 @@ export const runSyncBranchFlow = async (target = 'develop') => {
   }
 };
 
-const syncBranch = async (target = 'develop') => {
-  const targetBranch = target.trim();
-
-  if (!targetBranch) {
-    logger.error('Target branch is required.');
-    process.exitCode = 1;
-    return;
-  }
-
+const syncBranch = async (target?: string) => {
   const currentBranch = await getCurrentBranchNameForWorktree();
 
   if (!currentBranch) {
@@ -36,6 +31,18 @@ const syncBranch = async (target = 'develop') => {
   }
 
   await fetchOriginPrune();
+
+  const targetBranch = target ? target.trim() : await resolveSyncTarget(currentBranch);
+
+  if (!targetBranch) {
+    logger.error('Target branch is required.');
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await remoteBranchExists(targetBranch))) {
+    logger.warn(`origin/${targetBranch} not found — rebase may fail.`);
+  }
 
   if (await isWorkingTreeDirty()) {
     logger.error('Working tree is dirty. Commit or stash first.');
