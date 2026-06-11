@@ -18,7 +18,7 @@ export const getJiraIssues = async (): Promise<JiraIssue[]> => {
     const requestUrl = new URL(`${cloudUrl}/rest/api/3/search/jql`);
     requestUrl.searchParams.set('jql', jql);
     requestUrl.searchParams.set('maxResults', '50');
-    requestUrl.searchParams.set('fields', 'summary,key,status');
+    requestUrl.searchParams.set('fields', 'summary,key,status,issuetype');
 
     const response = await fetch(requestUrl.toString(), {
       method: 'GET',

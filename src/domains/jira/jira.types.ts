@@ -14,6 +14,16 @@ export interface JiraIssue {
 export interface JiraIssueFields {
   summary: string;
   status: JiraStatus;
+  issuetype: JiraIssueType;
+}
+
+export interface JiraIssueType {
+  self: string;
+  id: string;
+  description: string;
+  iconUrl: string;
+  name: string;
+  subtask: boolean;
 }
 
 export interface JiraStatus {

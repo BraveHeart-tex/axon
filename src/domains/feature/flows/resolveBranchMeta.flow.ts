@@ -1,10 +1,11 @@
 import c from 'ansi-colors';
 import inquirer from 'inquirer';
 
-import { COMMIT_LABELS } from '../feature.constants.js';
+import { COMMIT_LABELS, suggestBranchType } from '../feature.constants.js';
 
-export const resolveBranchMeta = async (issueKey: string) => {
+export const resolveBranchMeta = async (issueKey: string, workType?: string) => {
   const issueContext = c.dim(`  Issue: ${c.bold(issueKey)}`);
+  const suggestedBranchType = suggestBranchType(workType);
 
   const { commitLabel, shortDesc } = await inquirer.prompt<{
     commitLabel: string;
@@ -15,6 +16,7 @@ export const resolveBranchMeta = async (issueKey: string) => {
       name: 'commitLabel',
       message: `${issueContext}\n  Branch type:`,
       choices: COMMIT_LABELS,
+      default: suggestedBranchType,
     },
     {
       type: 'input',

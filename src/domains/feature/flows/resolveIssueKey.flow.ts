@@ -8,9 +8,14 @@ import { CLI_MODES } from '@/domains/mode/mode.constants.js';
 
 import { buildIssueChoices } from '../feature.formatter.js';
 
-export const resolveIssueKey = async (cliMode: string): Promise<string> => {
+export interface ResolvedIssue {
+  issueKey: string;
+  workType?: string;
+}
+
+export const resolveIssueKey = async (cliMode: string): Promise<ResolvedIssue> => {
   if (cliMode !== CLI_MODES.JIRA) {
-    return promptForIssueKey();
+    return { issueKey: await promptForIssueKey() };
   }
 
   const spinner = ora('Fetching Jira issues...').start();
@@ -18,7 +23,7 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
 
   if (issues.length === 0) {
     spinner.warn('No Jira issues matched your saved JQL. Please enter the issue key manually.');
-    return promptForIssueKey();
+    return { issueKey: await promptForIssueKey() };
   }
 
   spinner.stop();
@@ -37,7 +42,9 @@ export const resolveIssueKey = async (cliMode: string): Promise<string> => {
     },
   });
 
-  return issueKey;
+  const selectedIssue = issues.find((issue) => issue.key === issueKey);
+
+  return { issueKey, workType: selectedIssue?.fields.issuetype?.name };
 };
 
 const promptForIssueKey = async (): Promise<string> =>

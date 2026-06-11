@@ -11,12 +11,12 @@ import { resolveIssueKey } from './flows/resolveIssueKey.flow.js';
 export const runFeatureFlow = async () => {
   const cliMode = getCliModeConfig();
 
-  const [issueKey, baseBranch] = await Promise.all([
+  const [{ issueKey, workType }, baseBranch] = await Promise.all([
     resolveIssueKey(cliMode),
     remoteBranchExists('develop').then((exists) => (exists ? 'develop' : 'main')),
   ]);
 
-  const { commitLabel, slug } = await resolveBranchMeta(issueKey);
+  const { commitLabel, slug } = await resolveBranchMeta(issueKey, workType);
   const branch = slug ? `${commitLabel}/${issueKey}-${slug}` : `${commitLabel}/${issueKey}`;
 
   console.log('');
