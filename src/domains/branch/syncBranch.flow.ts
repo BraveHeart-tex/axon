@@ -6,7 +6,7 @@ import {
   isWorkingTreeDirty,
   pushCurrentBranchWithLease,
   rebaseOntoRemoteBranch,
-  remoteBranchExists,
+  remoteTrackingBranchExists,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
 
@@ -30,8 +30,13 @@ const syncBranch = async (target?: string) => {
     return;
   }
 
-  await fetchOriginPrune();
+  if (await isWorkingTreeDirty()) {
+    logger.error('Working tree is dirty. Commit or stash first.');
+    process.exitCode = 1;
+    return;
+  }
 
+  await fetchOriginPrune();
   const targetBranch = target ? target.trim() : await resolveSyncTarget(currentBranch);
 
   if (!targetBranch) {
@@ -40,14 +45,8 @@ const syncBranch = async (target?: string) => {
     return;
   }
 
-  if (!(await remoteBranchExists(targetBranch))) {
+  if (!(await remoteTrackingBranchExists(targetBranch))) {
     logger.warn(`origin/${targetBranch} not found — rebase may fail.`);
-  }
-
-  if (await isWorkingTreeDirty()) {
-    logger.error('Working tree is dirty. Commit or stash first.');
-    process.exitCode = 1;
-    return;
   }
 
   logger.info(`Rebasing ${c.bold(currentBranch)} onto ${c.bold(`origin/${targetBranch}`)}`);

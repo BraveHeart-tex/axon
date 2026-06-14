@@ -197,6 +197,18 @@ export const remoteBranchExists = async (branchName: string) => {
   return result.exitCode === 0;
 };
 
+export const remoteTrackingBranchExists = async (branchName: string) => {
+  const result = await execa(
+    'git',
+    ['show-ref', '--verify', '--quiet', `refs/remotes/origin/${branchName}`],
+    {
+      reject: false,
+    },
+  );
+
+  return result.exitCode === 0;
+};
+
 export const getMergeBase = async (ref1: string, ref2: string): Promise<string> => {
   const result = await execa('git', ['merge-base', ref1, ref2], { reject: false });
   return result.exitCode === 0 ? result.stdout.trim() : '';

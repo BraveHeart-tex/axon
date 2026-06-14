@@ -4,7 +4,7 @@ import c from 'ansi-colors';
 import {
   countCommitsBetween,
   getMergeBase,
-  remoteBranchExists,
+  remoteTrackingBranchExists,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
 
@@ -32,20 +32,21 @@ export const pickClosestBase = (candidates: BaseCandidate[]): string => {
 };
 
 const detectBaseBranch = async (currentBranch: string): Promise<string> => {
-  const candidates: BaseCandidate[] = [];
+  const candidates = await Promise.all(
+    BASE_BRANCH_CANDIDATES.filter((candidate) => candidate !== currentBranch).map(
+      async (candidate): Promise<BaseCandidate | undefined> => {
+        if (!(await remoteTrackingBranchExists(candidate))) return;
 
-  for (const candidate of BASE_BRANCH_CANDIDATES) {
-    if (candidate === currentBranch) continue;
-    if (!(await remoteBranchExists(candidate))) continue;
+        const mergeBase = await getMergeBase(`origin/${candidate}`, 'HEAD');
+        if (!mergeBase) return;
 
-    const mergeBase = await getMergeBase(`origin/${candidate}`, 'HEAD');
-    if (!mergeBase) continue;
+        const ahead = await countCommitsBetween(mergeBase, 'HEAD');
+        return { name: candidate, ahead };
+      },
+    ),
+  );
 
-    const ahead = await countCommitsBetween(mergeBase, 'HEAD');
-    candidates.push({ name: candidate, ahead });
-  }
-
-  return pickClosestBase(candidates);
+  return pickClosestBase(candidates.filter((candidate) => candidate !== undefined));
 };
 
 export const resolveSyncTarget = async (currentBranch: string): Promise<string> => {
