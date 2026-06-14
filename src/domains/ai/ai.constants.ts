@@ -9,3 +9,7 @@ export const AI_MODELS = {
 export const DEFAULT_AI_MODEL = AI_MODELS.LLAMA_4_SCOUT_17B;
 
 export const AI_MODEL_ENV_KEY = 'AXON_AI_MODEL';
+
+export const COMMIT_MESSAGE_MAX_OUTPUT_CHARS = 100;
+
+export const COMMIT_DIFF_MAX_CHARS = 6000;
