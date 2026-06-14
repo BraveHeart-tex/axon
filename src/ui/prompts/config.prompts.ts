@@ -7,8 +7,8 @@ import {
 } from '@/domains/config/config.constants.js';
 import { ConfigSettingKey, CredentialKey } from '@/domains/config/config.types.js';
 
-export type ConfigAction = 'set' | 'view' | 'delete' | 'list';
-export type ConfigTarget = 'setting' | 'credential';
+type ConfigAction = 'set' | 'view' | 'delete' | 'list';
+type ConfigTarget = 'setting' | 'credential';
 
 export const promptConfigAction = () =>
   inquirer.prompt<{ action: ConfigAction }>([

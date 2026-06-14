@@ -8,7 +8,7 @@ import { CLI_MODES } from '@/domains/mode/mode.constants.js';
 
 import { buildIssueChoices } from '../feature.formatter.js';
 
-export interface ResolvedIssue {
+interface ResolvedIssue {
   issueKey: string;
   workType?: string;
 }

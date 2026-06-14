@@ -20,13 +20,6 @@ const validateAiModel = (value: string, source: string): AiModel => {
 
 export const listSupportedAiModels = (): AiModel[] => Object.values(AI_MODELS);
 
-export const getStoredAiModel = (): AiModel | '' => {
-  const value = readConfig().aiModel;
-  if (!value) return '';
-
-  return validateAiModel(value, 'config');
-};
-
 export const setStoredAiModel = (model: AiModel): void => {
   writeConfig({ aiModel: model });
 };

@@ -2,7 +2,7 @@ import { deleteApiKey, getApiKey, listApiKeys, setApiKey } from '@/config/apiKey
 import { CredentialKey } from '@/domains/config/config.types.js';
 import { AxonConfig, readConfig, writeConfig } from '@/infra/store/configStore.js';
 
-export type ConfigKey = keyof AxonConfig;
+type ConfigKey = keyof AxonConfig;
 
 export const ConfigManager = {
   get: (key: ConfigKey): string => readConfig()[key],

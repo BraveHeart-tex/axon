@@ -1,10 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/bin/cli.ts"],
-  "project": ["src/**/*.ts", "*.config.ts"],
-  "ignoreExportsUsedInFile": {
-    "interface": true,
-    "type": true
-  },
-  "tags": ["-lintignore"]
+  "entry": ["src/bin/cli.ts!", "tests/**/*.test.ts"],
+  "project": ["src/**/*.ts!", "tests/**/*.ts"],
+  "includeEntryExports": true,
+  "treatConfigHintsAsErrors": true
 }

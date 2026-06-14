@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "lint": "eslint --fix .",
     "prepare": "husky",
-    "knip": "knip"
+    "knip": "knip",
+    "knip:production": "knip --production"
   },
   "resolutions": {
     "brace-expansion": "1.1.13",

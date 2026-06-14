@@ -11,13 +11,13 @@ export interface JiraIssue {
   fields: JiraIssueFields;
 }
 
-export interface JiraIssueFields {
+interface JiraIssueFields {
   summary: string;
   status: JiraStatus;
   issuetype: JiraIssueType;
 }
 
-export interface JiraIssueType {
+interface JiraIssueType {
   self: string;
   id: string;
   description: string;
@@ -26,7 +26,7 @@ export interface JiraIssueType {
   subtask: boolean;
 }
 
-export interface JiraStatus {
+interface JiraStatus {
   self: string;
   description: string;
   iconUrl: string;
@@ -35,7 +35,7 @@ export interface JiraStatus {
   statusCategory: JiraStatusCategory;
 }
 
-export interface JiraStatusCategory {
+interface JiraStatusCategory {
   self: string;
   id: number;
   key: string;
