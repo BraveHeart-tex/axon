@@ -1,11 +1,14 @@
+import { confirm } from '@inquirer/prompts';
 import c from 'ansi-colors';
 
 import {
+  abortRebase,
   fetchOriginPrune,
   getCurrentBranchNameForWorktree,
   isWorkingTreeDirty,
   pushCurrentBranchWithLease,
   rebaseOntoRemoteBranch,
+  rebaseOntoRemoteBranchInteractive,
   remoteTrackingBranchExists,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
@@ -50,7 +53,24 @@ const syncBranch = async (target?: string) => {
   }
 
   logger.info(`Rebasing ${c.bold(currentBranch)} onto ${c.bold(`origin/${targetBranch}`)}`);
-  await rebaseOntoRemoteBranch(targetBranch);
+
+  try {
+    await rebaseOntoRemoteBranch(targetBranch);
+  } catch {
+    logger.warn(`Rebase onto origin/${targetBranch} failed.`);
+
+    const useInteractive = await confirm({
+      message: 'Start an interactive rebase instead, so you can resolve conflicts step by step?',
+      default: false,
+    });
+
+    if (!useInteractive) {
+      throw new Error(`Rebase of ${currentBranch} onto origin/${targetBranch} failed.`);
+    }
+
+    await abortRebase();
+    await rebaseOntoRemoteBranchInteractive(targetBranch);
+  }
 
   logger.info('Pushing with --force-with-lease');
   await pushCurrentBranchWithLease();

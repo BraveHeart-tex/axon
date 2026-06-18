@@ -167,6 +167,14 @@ export const rebaseOntoRemoteBranch = async (branchName: string) => {
   await execa('git', ['rebase', `origin/${branchName}`], { stdio: 'inherit' });
 };
 
+export const rebaseOntoRemoteBranchInteractive = async (branchName: string) => {
+  await execa('git', ['rebase', '--interactive', `origin/${branchName}`], { stdio: 'inherit' });
+};
+
+export const abortRebase = async () => {
+  await execa('git', ['rebase', '--abort'], { stdio: 'inherit', reject: false });
+};
+
 export const inferJiraScopeFromBranch = (branch: string) => {
   const scopeMatch = branch.match(JIRA_REGEX);
   if (!scopeMatch) return '';
