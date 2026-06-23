@@ -24,7 +24,8 @@
   "resolutions": {
     "brace-expansion": "1.1.13",
     "fast-uri": "3.1.2",
-    "esbuild": "0.28.1"
+    "esbuild": "0.28.1",
+    "js-yaml": "4.2.0"
   },
   "dependencies": {
     "@ai-sdk/groq": "2.0.22",
