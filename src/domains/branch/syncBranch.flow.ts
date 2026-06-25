@@ -48,6 +48,27 @@ const syncBranch = async (target?: string) => {
     return;
   }
 
+  const isReleaseBranch = currentBranch.startsWith('release/');
+  const isMainOrMaster = targetBranch === 'main' || targetBranch === 'master';
+
+  if (isReleaseBranch && !isMainOrMaster) {
+    logger.warn(
+      `${c.bold(currentBranch)} is a release branch. Syncing it onto ${c.bold(
+        `origin/${targetBranch}`,
+      )} instead of main/master is unusual.`,
+    );
+
+    const proceed = await confirm({
+      message: `Sync release branch onto origin/${targetBranch}?`,
+      default: false,
+    });
+
+    if (!proceed) {
+      logger.info('Sync aborted.');
+      return;
+    }
+  }
+
   if (!(await remoteTrackingBranchExists(targetBranch))) {
     logger.warn(`origin/${targetBranch} not found — rebase may fail.`);
   }
