@@ -69,6 +69,24 @@ const syncBranch = async (target?: string) => {
     }
   }
 
+  if (!isReleaseBranch && isMainOrMaster) {
+    logger.warn(
+      `${c.bold(currentBranch)} is a feature branch. Rebasing it onto ${c.bold(
+        `origin/${targetBranch}`,
+      )} is unusual — feature branches are normally synced onto develop.`,
+    );
+
+    const proceed = await confirm({
+      message: `Rebase feature branch onto origin/${targetBranch}?`,
+      default: false,
+    });
+
+    if (!proceed) {
+      logger.info('Sync aborted.');
+      return;
+    }
+  }
+
   if (!(await remoteTrackingBranchExists(targetBranch))) {
     logger.warn(`origin/${targetBranch} not found — rebase may fail.`);
   }
