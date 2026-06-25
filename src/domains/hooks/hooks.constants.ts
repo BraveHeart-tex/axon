@@ -15,12 +15,24 @@ export const HOOKS: HookDefinition[] = [
     hookFile: 'prepare-commit-msg',
     description: 'Prevents "git commit --amend" on release/* branches.',
     script: `
+#!/bin/bash
+
+# 1. Get the current branch name
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ] && [ "\${2:-}" = "commit" ]; then
-  printf "\\n\\033[31m[AXON] AMEND BLOCKED\\033[0m\\n"
-  printf "Please create a new commit instead.\\n\\n"
-  exit 1
-fi`.trim(),
+
+# 2. Check if we are on a release branch
+if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ]; then
+
+    # 3. Check if the parent command was an 'amend'
+    # We look at the actual command arguments used to invoke git
+    if ps -p $PPID -o args= | grep -E -q -- '--amend'; then
+        printf "\\n\\033[31m[AXON] AMEND BLOCKED\\033[0m\\n"
+        printf "Amending commits on release branches is prohibited.\\n"
+        printf "Please create a new commit instead.\\n\\n"
+        exit 1
+    fi
+fi
+`.trim(),
   },
   {
     id: 'suggest-sync',
