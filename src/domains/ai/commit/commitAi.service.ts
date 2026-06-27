@@ -1,7 +1,8 @@
+import readline from 'node:readline';
+
 import { confirm, input, select } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import ora from 'ora';
-import readline from 'readline';
 
 import { commitWithMessage, pushCurrentBranch } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
@@ -71,10 +72,7 @@ export const runCommitAiFlow = async () => {
       }
 
       if (action === 'edit') {
-        const edited = await editMessageInline(
-          c.cyan('? ') + c.bold('Edit commit message: '),
-          message,
-        );
+        const edited = await editMessageInline(message);
 
         if (!edited) {
           logger.error('Commit message cannot be empty.');
@@ -125,26 +123,25 @@ const generateMessage = async (
   return normalizeGeneratedCommitMessage(raw, context);
 };
 
-const editMessageInline = (promptMsg: string, initialText: string): Promise<string> =>
+const editMessageInline = (initialText: string): Promise<string> =>
   new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
+      prompt: '? Edit commit message: ',
       terminal: true,
     });
 
-    // Handle Ctrl+C gracefully
     rl.on('SIGINT', () => {
       rl.close();
       process.exit(0);
     });
 
-    rl.setPrompt(promptMsg);
-    rl.prompt();
-    rl.write(initialText); // Puts the text directly into the editable buffer
-
-    rl.on('line', (line) => {
+    rl.once('line', (line) => {
       rl.close();
       resolve(line.trim());
     });
+
+    rl.prompt(true);
+    rl.write(initialText);
   });
