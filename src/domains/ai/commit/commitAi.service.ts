@@ -1,18 +1,16 @@
-import readline from 'node:readline';
-
 import { confirm, input, select } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import ora from 'ora';
 
 import { commitWithMessage, pushCurrentBranch } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
+import { editMessageInline } from '@/shared/editMessageInline.js';
 
 import { getCommitMessagePrompt } from '../ai.prompts.js';
 import { generateAiResponse } from '../ai.service.js';
 import { normalizeGeneratedCommitMessage } from './commitMessageFormatter.js';
 import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
 import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';
-
 export const runCommitAiFlow = async () => {
   try {
     const apiKey = await ensureAiApiKey();
@@ -72,7 +70,10 @@ export const runCommitAiFlow = async () => {
       }
 
       if (action === 'edit') {
-        const edited = await editMessageInline(message);
+        const edited = await editMessageInline({
+          initialText: message,
+          prompt: '? Edit commit message: ',
+        });
 
         if (!edited) {
           logger.error('Commit message cannot be empty.');
@@ -122,26 +123,3 @@ const generateMessage = async (
 
   return normalizeGeneratedCommitMessage(raw, context);
 };
-
-const editMessageInline = (initialText: string): Promise<string> =>
-  new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      prompt: '? Edit commit message: ',
-      terminal: true,
-    });
-
-    rl.on('SIGINT', () => {
-      rl.close();
-      process.exit(0);
-    });
-
-    rl.once('line', (line) => {
-      rl.close();
-      resolve(line.trim());
-    });
-
-    rl.prompt(true);
-    rl.write(initialText);
-  });

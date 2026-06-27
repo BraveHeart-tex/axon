@@ -1,10 +1,9 @@
-import inquirer from 'inquirer';
-
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
 } from '@/domains/git/git.service.js';
+import { editMessageInline } from '@/shared/editMessageInline.js';
 
 import { inferCommitTypeFromBranch, inferIntentFromBranch } from '../inferFromBranch.js';
 import { CommitType } from '../types.js';
@@ -25,19 +24,15 @@ export const resolveCommitContext = async (): Promise<CommitContext> => {
     throw new Error('No staged changes found. Stage your changes with git add first.');
   }
 
-  const { hint } = await inquirer.prompt<{ hint: string }>([
-    {
-      type: 'input',
-      name: 'hint',
-      message: 'Why are you making this change? (optional, press Enter to skip)',
-    },
-  ]);
+  const hint = await editMessageInline({
+    prompt: 'Why are you making this change? (optional, press Enter to skip): ',
+  });
 
   const branchName = await getCurrentBranchName();
 
   return {
     diff,
-    userHint: hint.trim() || undefined,
+    userHint: hint?.trim() || undefined,
     branchName,
     inferredScope: inferJiraScopeFromBranch(branchName) || undefined,
     branchIntent: inferIntentFromBranch(branchName),
