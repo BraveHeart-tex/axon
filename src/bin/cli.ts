@@ -29,7 +29,6 @@ program
   .command('release')
   .alias('r')
   .description('Create a release branch')
-  .option('--only-unmerged', 'Only show unmerged commits')
   .option('--author <author>', 'Filter by author')
   .action(releaseCommand);
 

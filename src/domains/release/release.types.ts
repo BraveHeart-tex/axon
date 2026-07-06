@@ -1,7 +1,6 @@
 import type { RecentCommit } from '@/domains/git/git.types.js';
 
 export interface ReleaseOptions {
-  onlyUnmerged: boolean;
   author: string;
 }
 

@@ -34,14 +34,11 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
   try {
     await checkoutBranch('develop');
     await pullBranch('develop');
-
-    if (options.onlyUnmerged) {
-      await fetchRemote('origin');
-    }
+    await fetchRemote('origin');
 
     const recentCommits = await getRecentCommitsForDevelop({
       limit: 50,
-      onlyUnmerged: options.onlyUnmerged,
+      onlyUnmerged: true,
       author: options.author,
     });
 
