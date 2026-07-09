@@ -90,7 +90,7 @@ export const getRecentCommitsForDevelop = async ({
     // Get candidate commits from develop not in main (by SHA)
     const { stdout: developStdout } = await execa('git', [
       'log',
-      'main...develop',
+      'origin/main...develop',
       '--right-only',
       '--no-merges',
       '--pretty=format:%h|%an|%ad|%s',
@@ -105,7 +105,7 @@ export const getRecentCommitsForDevelop = async ({
     // Get all commit subjects from main for filtering
     const { stdout: mainStdout } = await execa('git', [
       'log',
-      'main',
+      'origin/main',
       '--no-merges',
       '--pretty=format:%s',
     ]);
