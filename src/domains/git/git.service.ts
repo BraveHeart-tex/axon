@@ -102,12 +102,15 @@ export const getRecentCommitsForDevelop = async ({
 
     if (developStdout === '') return [];
 
-    // Get all commit subjects from main for filtering
+    // Bounded so cost does not grow with repo history; a released duplicate is always recent.
+    const MAIN_SUBJECT_LOOKBACK = 1000;
     const { stdout: mainStdout } = await execa('git', [
       'log',
       'origin/main',
       '--no-merges',
       '--pretty=format:%s',
+      '-n',
+      String(MAIN_SUBJECT_LOOKBACK),
     ]);
 
     const mainSubjects = new Set(mainStdout.split('\n').filter(Boolean));
@@ -148,8 +151,8 @@ export const getCurrentBranchNameForWorktree = async () => {
   return stdout.trim();
 };
 
-export const fetchRemote = async (branchName: string) => {
-  await execa('git', ['fetch', branchName], { stdio: 'inherit' });
+export const fetchBranchFromRemote = async (remote: string, branch: string) => {
+  await execa('git', ['fetch', remote, branch], { stdio: 'inherit' });
 };
 
 export const fetchOriginPrune = async () => {

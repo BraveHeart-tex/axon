@@ -86,7 +86,7 @@ describe('executeRelease', () => {
     mockedCreateBranch.mockResolvedValue(undefined);
     mockedCherryPick.mockResolvedValue(successfulCherryPick);
     mockedAbortCherryPick.mockResolvedValue(undefined);
-    mockedHandleMrUrlGeneration.mockResolvedValue(undefined);
+    mockedHandleMrUrlGeneration.mockResolvedValue(null);
   });
 
   afterEach(() => {

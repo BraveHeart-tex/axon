@@ -3,7 +3,7 @@ import ora from 'ora';
 
 import {
   checkoutBranch,
-  fetchRemote,
+  fetchBranchFromRemote,
   getRecentCommitsForDevelop,
   pullBranch,
 } from '@/domains/git/git.service.js';
@@ -34,7 +34,7 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
   try {
     await checkoutBranch('develop');
     await pullBranch('develop');
-    await fetchRemote('origin');
+    await fetchBranchFromRemote('origin', 'main');
 
     const recentCommits = await getRecentCommitsForDevelop({
       limit: 50,
