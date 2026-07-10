@@ -251,23 +251,3 @@ export const pushCurrentBranch = async (): Promise<void> => {
 export const pushCurrentBranchWithLease = async (): Promise<void> => {
   await execa('git', ['push', '--force-with-lease'], { stdio: 'inherit' });
 };
-
-export const pushBranch = async (name: string) => {
-  await execa('git', ['push', '-u', 'origin', name]);
-};
-
-export const getRecentCommitsForBranch = async (
-  branch: string,
-  limit = 10,
-): Promise<RecentCommit[]> => {
-  // We want commits unique to this branch compared to develop
-  // Logic: git log develop..branch
-  const { stdout } = await execa('git', [
-    'log',
-    `develop..${branch}`,
-    `--max-count=${limit}`,
-    '--pretty=format:%h|%an|%ar|%s',
-  ]);
-
-  return formatCommits(stdout.split('\n').filter(Boolean));
-};
