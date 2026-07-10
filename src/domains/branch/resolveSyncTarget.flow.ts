@@ -9,7 +9,9 @@ import {
 import { logger } from '@/infra/logger.js';
 
 const BASE_BRANCH_CANDIDATES = ['develop', 'main', 'master'];
+const RELEASE_BASE_BRANCH_CANDIDATES = ['main', 'master'];
 const FALLBACK_BASE_BRANCH = 'develop';
+const FALLBACK_RELEASE_BASE_BRANCH = 'main';
 
 interface BaseCandidate {
   name: string;
@@ -49,8 +51,20 @@ const detectBaseBranch = async (currentBranch: string): Promise<string> => {
   return pickClosestBase(candidates.filter((candidate) => candidate !== undefined));
 };
 
+// Release branches always merge back into the trunk, so suggest main/master
+// directly instead of guessing from merge-bases.
+const detectReleaseBaseBranch = async (): Promise<string> => {
+  for (const candidate of RELEASE_BASE_BRANCH_CANDIDATES) {
+    if (await remoteTrackingBranchExists(candidate)) return candidate;
+  }
+
+  return FALLBACK_RELEASE_BASE_BRANCH;
+};
+
 export const resolveSyncTarget = async (currentBranch: string): Promise<string> => {
-  const suggested = await detectBaseBranch(currentBranch);
+  const suggested = currentBranch.startsWith('release/')
+    ? await detectReleaseBaseBranch()
+    : await detectBaseBranch(currentBranch);
 
   logger.info(`Detected base branch: ${c.bold(suggested)}`);
 
