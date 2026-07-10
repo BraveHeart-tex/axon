@@ -160,8 +160,10 @@ export const fetchOriginPrune = async () => {
 };
 
 export const isWorkingTreeDirty = async () => {
-  const unstagedChanges = await execa('git', ['diff', '--quiet'], { reject: false });
-  const stagedChanges = await execa('git', ['diff', '--cached', '--quiet'], { reject: false });
+  const [unstagedChanges, stagedChanges] = await Promise.all([
+    execa('git', ['diff', '--quiet'], { reject: false }),
+    execa('git', ['diff', '--cached', '--quiet'], { reject: false }),
+  ]);
 
   return unstagedChanges.exitCode !== 0 || stagedChanges.exitCode !== 0;
 };
