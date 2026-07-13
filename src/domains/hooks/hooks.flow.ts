@@ -5,7 +5,6 @@ import fs from 'fs';
 import path from 'path';
 
 import {
-  formatCodePane,
   getHookMarkers,
   type HookDefinition,
   HOOKS,
@@ -14,7 +13,7 @@ import {
 
 export const runHooksFlow = async () => {
   console.log(c.cyan.bold('\n  Axon Hook Manager'));
-  console.log(c.dim('  Select hooks to install. Use arrows to preview code.\n'));
+  console.log(c.dim('  Choose which safeguards should run in this repository.\n'));
 
   let repoRoot: string;
   try {
@@ -38,12 +37,12 @@ export const runHooksFlow = async () => {
 
   const choices = HOOKS.map((hook) => {
     const installed = installedIds.has(hook.id);
+    const installedLabel = installed ? `  ${c.green('●')} ${c.dim('installed')}` : '';
 
     return {
-      name: installed ? `${hook.name} ${c.dim('(installed)')}` : hook.name,
+      name: `${c.bold(hook.name)}${installedLabel}\n      ${c.dim(hook.description)}`,
       value: hook,
       checked: installed,
-      description: `${c.white(hook.description)}\n${formatCodePane(hook.script)}`,
     };
   });
 

@@ -1,4 +1,4 @@
-import c from 'ansi-colors';
+import { JIRA_PROJECT_LABELS } from '@/domains/jira/jira.constants.js';
 
 export interface HookDefinition {
   id: string;
@@ -8,12 +8,14 @@ export interface HookDefinition {
   script: string;
 }
 
+const JIRA_LABEL_PATTERN = JIRA_PROJECT_LABELS.join('|');
+
 export const HOOKS: HookDefinition[] = [
   {
     id: 'block-amend',
     name: 'Block Amends on Release',
     hookFile: 'prepare-commit-msg',
-    description: 'Prevents "git commit --amend" on release/* branches.',
+    description: 'Stop amended commits on release/* branches.',
     script: `
 #!/bin/bash
 
@@ -38,7 +40,7 @@ fi
     id: 'suggest-sync',
     name: 'Suggest Sync-back',
     hookFile: 'post-commit',
-    description: 'Reminds you to run "axon sync" after committing to release/.',
+    description: 'Remind me to run "axon sync" after a release/* commit.',
     script: `
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ]; then
@@ -46,17 +48,45 @@ if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ]; then
   printf "Run \\033[1;32maxon sync\\033[0m to backport this fix.\\n\\n"
 fi`.trim(),
   },
+  {
+    id: 'warn-jira-mismatch',
+    name: 'Warn on Jira Mismatch',
+    hookFile: 'commit-msg',
+    description: 'Highlight Jira key differences between the branch and commit message.',
+    script: `
+COMMIT_MESSAGE_FILE=$1
+
+if [ -z "$COMMIT_MESSAGE_FILE" ]; then
+  exit 0
+fi
+
+BRANCH_NAME=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || exit 0
+
+if git rev-parse --verify --quiet MERGE_HEAD >/dev/null 2>&1; then
+  exit 0
+fi
+
+extract_jira_key() {
+  printf '%s\\n' "$1" |
+    grep -Eo '(^|[^[:alnum:]_])(${JIRA_LABEL_PATTERN})-[0-9]+([^[:alnum:]_]|$)' |
+    head -n 1 |
+    grep -Eo '(${JIRA_LABEL_PATTERN})-[0-9]+'
+}
+
+COMMIT_MESSAGE=$(cat "$COMMIT_MESSAGE_FILE" 2>/dev/null) || exit 0
+BRANCH_JIRA_KEY=$(extract_jira_key "$BRANCH_NAME") || true
+COMMIT_JIRA_KEY=$(extract_jira_key "$COMMIT_MESSAGE") || true
+
+if [ "$BRANCH_JIRA_KEY" != "$COMMIT_JIRA_KEY" ]; then
+  printf "\\n\\033[30;103m  ⚠  AXON · JIRA MISMATCH  \\033[0m\\n\\n"
+  printf "  Branch Jira key: %s\\n" "\${BRANCH_JIRA_KEY:-none}"
+  printf "  Commit Jira key: %s\\n" "\${COMMIT_JIRA_KEY:-none}"
+  printf "\\n  \\033[1;33mCommit will continue.\\033[0m Verify the branch name or commit message.\\n\\n"
+fi
+
+exit 0`.trim(),
+  },
 ];
-
-export const formatCodePane = (script: string) => {
-  const lines = script.split('\n');
-  const header = c.yellow('┌─── Source Code Preview ──────────────────────────');
-  const footer = c.yellow('└──────────────────────────────────────────────────');
-
-  const content = lines.map((line) => `${c.yellow('│')} ${c.dim(line)}`).join('\n');
-
-  return `\n${header}\n${content}\n${footer}`;
-};
 
 export const getHookMarkers = (id: string) => ({
   start: `# AXON_START: ${id}`,
