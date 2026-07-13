@@ -104,6 +104,7 @@ const syncBranch = async (target?: string) => {
     });
 
     if (!useInteractive) {
+      await abortRebase();
       throw new Error(`Rebase of ${currentBranch} onto origin/${targetBranch} failed.`);
     }
 
