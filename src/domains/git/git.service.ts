@@ -168,12 +168,18 @@ export const isWorkingTreeDirty = async () => {
   return unstagedChanges.exitCode !== 0 || stagedChanges.exitCode !== 0;
 };
 
+// --fork-point matches `git pull --rebase`: it uses the origin/<branch> reflog to drop
+// local commits already integrated upstream under a different SHA (squash-merge, force-push),
+// instead of replaying them and hitting spurious conflicts. Without it an explicit-upstream
+// rebase defaults to --no-fork-point and fails where `git pull --rebase` succeeds.
 export const rebaseOntoRemoteBranch = async (branchName: string) => {
-  await execa('git', ['rebase', `origin/${branchName}`], { stdio: 'inherit' });
+  await execa('git', ['rebase', '--fork-point', `origin/${branchName}`], { stdio: 'inherit' });
 };
 
 export const rebaseOntoRemoteBranchInteractive = async (branchName: string) => {
-  await execa('git', ['rebase', '--interactive', `origin/${branchName}`], { stdio: 'inherit' });
+  await execa('git', ['rebase', '--fork-point', '--interactive', `origin/${branchName}`], {
+    stdio: 'inherit',
+  });
 };
 
 export const abortRebase = async () => {
