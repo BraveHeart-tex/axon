@@ -42,3 +42,18 @@ interface JiraStatusCategory {
   colorName: string;
   name: string;
 }
+
+export interface JiraTransitionsResponse {
+  transitions: JiraTransition[];
+}
+
+export interface JiraTransition {
+  id: string;
+  name: string;
+  to: JiraTransitionTarget;
+}
+
+interface JiraTransitionTarget {
+  id: string;
+  name: string;
+}

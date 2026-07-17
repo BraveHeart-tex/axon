@@ -11,6 +11,7 @@ import { buildIssueChoices } from '../feature.formatter.js';
 interface ResolvedIssue {
   issueKey: string;
   workType?: string;
+  currentStatus?: string;
 }
 
 export const resolveIssueKey = async (cliMode: string): Promise<ResolvedIssue> => {
@@ -44,7 +45,11 @@ export const resolveIssueKey = async (cliMode: string): Promise<ResolvedIssue> =
 
   const selectedIssue = issues.find((issue) => issue.key === issueKey);
 
-  return { issueKey, workType: selectedIssue?.fields.issuetype?.name };
+  return {
+    issueKey,
+    workType: selectedIssue?.fields.issuetype?.name,
+    currentStatus: selectedIssue?.fields.status?.name,
+  };
 };
 
 const promptForIssueKey = async (): Promise<string> =>
