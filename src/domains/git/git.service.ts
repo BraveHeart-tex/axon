@@ -6,7 +6,7 @@ import { RecentCommit } from './git.types.js';
 
 export const checkoutBranch = async (branch: string) => {
   try {
-    await execa('git', ['checkout', branch], { stdio: 'inherit' });
+    await execa('git', ['checkout', branch]);
   } catch (error) {
     throw new Error(`Failed to checkout branch ${branch}: ${(error as Error).message}`);
   }
@@ -14,7 +14,7 @@ export const checkoutBranch = async (branch: string) => {
 
 export const pullBranch = async (branch: string) => {
   try {
-    await execa('git', ['pull', 'origin', branch], { stdio: 'inherit' });
+    await execa('git', ['pull', 'origin', branch]);
   } catch (error) {
     throw new Error(`Failed to pull branch ${branch}: ${(error as Error).message}`);
   }
@@ -152,7 +152,7 @@ export const getCurrentBranchNameForWorktree = async () => {
 };
 
 export const fetchBranchFromRemote = async (remote: string, branch: string) => {
-  await execa('git', ['fetch', remote, branch], { stdio: 'inherit' });
+  await execa('git', ['fetch', remote, branch]);
 };
 
 export const fetchOriginPrune = async () => {

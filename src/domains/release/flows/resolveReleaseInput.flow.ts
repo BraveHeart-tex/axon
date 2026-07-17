@@ -29,13 +29,16 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
     return resolveManualRelease();
   }
 
-  const spinner = ora('Fetching recent commits from develop...').start();
+  const spinner = ora('Updating develop...').start();
 
   try {
     await checkoutBranch('develop');
     await pullBranch('develop');
+
+    spinner.text = 'Updating main...';
     await fetchBranchFromRemote('origin', 'main');
 
+    spinner.text = 'Fetching recent commits from develop...';
     const recentCommits = await getRecentCommitsForDevelop({
       limit: 50,
       onlyUnmerged: true,
