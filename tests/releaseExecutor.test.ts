@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   abortCherryPick,
-  checkoutBranch,
   cherryPick,
   createBranch,
   deleteLocalBranch,
   localBranchExists,
-  pullBranch,
 } from '@/domains/git/git.service.js';
 import { handleMrUrlGeneration } from '@/domains/mr/flows/mrUrl.flow.js';
+import { updateBranchSafely } from '@/domains/release/flows/updateBranchSafely.flow.js';
+import { createReleaseAbortedError, isReleaseAbortedError } from '@/domains/release/release.errors.js';
 import { executeRelease } from '@/domains/release/release.executor.js';
 import type { ReleasePlan } from '@/domains/release/release.types.js';
 import { logger } from '@/infra/logger.js';
@@ -27,12 +27,14 @@ vi.mock('ora', () => ({
 
 vi.mock('@/domains/git/git.service.js', () => ({
   abortCherryPick: vi.fn(),
-  checkoutBranch: vi.fn(),
   cherryPick: vi.fn(),
   createBranch: vi.fn(),
   deleteLocalBranch: vi.fn(),
   localBranchExists: vi.fn(),
-  pullBranch: vi.fn(),
+}));
+
+vi.mock('@/domains/release/flows/updateBranchSafely.flow.js', () => ({
+  updateBranchSafely: vi.fn(),
 }));
 
 vi.mock('@/domains/mr/flows/mrUrl.flow.js', () => ({
@@ -52,13 +54,12 @@ vi.mock('@/ui/prompts/release.prompts.js', () => ({
 }));
 
 const mockedAbortCherryPick = vi.mocked(abortCherryPick);
-const mockedCheckoutBranch = vi.mocked(checkoutBranch);
+const mockedUpdateBranchSafely = vi.mocked(updateBranchSafely);
 const mockedCherryPick = vi.mocked(cherryPick);
 const mockedCreateBranch = vi.mocked(createBranch);
 const mockedDeleteLocalBranch = vi.mocked(deleteLocalBranch);
 const mockedHandleMrUrlGeneration = vi.mocked(handleMrUrlGeneration);
 const mockedLocalBranchExists = vi.mocked(localBranchExists);
-const mockedPullBranch = vi.mocked(pullBranch);
 const mockedPromptRecreateReleaseBranch = vi.mocked(promptRecreateReleaseBranch);
 
 const RELEASE_BRANCH = 'release/ORD-1325';
@@ -78,8 +79,7 @@ describe('executeRelease', () => {
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
     spinner.start.mockReturnValue(spinner);
-    mockedCheckoutBranch.mockResolvedValue(undefined);
-    mockedPullBranch.mockResolvedValue(undefined);
+    mockedUpdateBranchSafely.mockResolvedValue(undefined);
     mockedLocalBranchExists.mockResolvedValue(false);
     mockedPromptRecreateReleaseBranch.mockResolvedValue(false);
     mockedDeleteLocalBranch.mockResolvedValue(undefined);
@@ -93,15 +93,25 @@ describe('executeRelease', () => {
     vi.mocked(console.log).mockRestore();
   });
 
-  it('checks out and pulls main before creating the release branch', async () => {
+  it('updates main before creating the release branch', async () => {
     await executeRelease(plan);
 
-    expect(mockedCheckoutBranch).toHaveBeenCalledWith('main');
-    expect(mockedPullBranch).toHaveBeenCalledWith('main');
+    expect(mockedUpdateBranchSafely).toHaveBeenCalledWith('main');
     expect(mockedCreateBranch).toHaveBeenCalledWith(RELEASE_BRANCH);
-    expect(mockedPullBranch.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(mockedUpdateBranchSafely.mock.invocationCallOrder[0]).toBeLessThan(
       mockedCreateBranch.mock.invocationCallOrder[0]!,
     );
+  });
+
+  it('propagates a ReleaseAbortedError from the main update and creates no branch', async () => {
+    mockedUpdateBranchSafely.mockRejectedValueOnce(createReleaseAbortedError('Release aborted.'));
+
+    const error = await executeRelease(plan).catch((err: unknown) => err);
+
+    expect(isReleaseAbortedError(error)).toBe(true);
+    expect(mockedCreateBranch).not.toHaveBeenCalled();
+    expect(mockedCherryPick).not.toHaveBeenCalled();
+    expect(mockedHandleMrUrlGeneration).not.toHaveBeenCalled();
   });
 
   it('creates a release branch when it does not already exist', async () => {

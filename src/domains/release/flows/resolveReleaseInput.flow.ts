@@ -2,15 +2,14 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 
 import {
-  checkoutBranch,
   fetchBranchFromRemote,
   getRecentCommitsForDevelop,
-  pullBranch,
 } from '@/domains/git/git.service.js';
 
 import type { ReleaseInput, ReleaseOptions } from '../release.types.js';
 import { resolveListBasedRelease } from './resolveListBasedRelease.flow.js';
 import { resolveManualRelease } from './resolveManualRelease.flow.js';
+import { updateBranchSafely } from './updateBranchSafely.flow.js';
 
 export const resolveReleaseInput = async (options: ReleaseOptions): Promise<ReleaseInput> => {
   const { pickMethod } = await inquirer.prompt<{ pickMethod: 'manual' | 'list' }>([
@@ -29,13 +28,12 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
     return resolveManualRelease();
   }
 
-  const spinner = ora('Updating develop...').start();
+  // Interactive (may prompt to rebase) — must run before the spinner starts.
+  await updateBranchSafely('develop');
+
+  const spinner = ora('Updating main...').start();
 
   try {
-    await checkoutBranch('develop');
-    await pullBranch('develop');
-
-    spinner.text = 'Updating main...';
     await fetchBranchFromRemote('origin', 'main');
 
     spinner.text = 'Fetching recent commits from develop...';

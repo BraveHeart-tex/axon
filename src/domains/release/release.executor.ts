@@ -3,32 +3,23 @@ import ora from 'ora';
 
 import {
   abortCherryPick,
-  checkoutBranch,
   cherryPick,
   createBranch,
   deleteLocalBranch,
   localBranchExists,
-  pullBranch,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
 import { promptRecreateReleaseBranch } from '@/ui/prompts/release.prompts.js';
 
 import { handleMrUrlGeneration } from '../mr/flows/mrUrl.flow.js';
+import { updateBranchSafely } from './flows/updateBranchSafely.flow.js';
 import type { ReleasePlan } from './release.types.js';
 
 export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
   const { branchTitle, commits } = plan;
 
-  // --- Checkout + pull main ---
-  const setupSpinner = ora('Checking out main and pulling latest...').start();
-  try {
-    await checkoutBranch('main');
-    await pullBranch('main');
-    setupSpinner.succeed('main is up to date.');
-  } catch (err) {
-    setupSpinner.fail('Failed to checkout or pull main.');
-    throw err;
-  }
+  // --- Update main (may prompt to rebase — must run before any spinner) ---
+  await updateBranchSafely('main');
 
   // --- Create release branch ---
   const branchExists = await localBranchExists(branchTitle);
