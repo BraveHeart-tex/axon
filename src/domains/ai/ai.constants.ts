@@ -1,15 +1,13 @@
 export const AI_MODELS = {
-  LLAMA_33_70B_VERSATILE: 'llama-3.3-70b-versatile',
-  LLAMA_4_SCOUT_17B: 'meta-llama/llama-4-scout-17b-16e-instruct',
-  QWEN3_32B: 'qwen/qwen3-32b',
   GPT_OSS_120B: 'openai/gpt-oss-120b',
   GPT_OSS_20B: 'openai/gpt-oss-20b',
+  QWEN3_6_27B: 'qwen/qwen3.6-27b',
 } as const;
 
-export const DEFAULT_AI_MODEL = AI_MODELS.LLAMA_4_SCOUT_17B;
+export const DEFAULT_AI_MODEL = AI_MODELS.GPT_OSS_120B;
 
 export const AI_MODEL_ENV_KEY = 'AXON_AI_MODEL';
 
 export const COMMIT_MESSAGE_MAX_OUTPUT_CHARS = 100;
 
-export const COMMIT_DIFF_MAX_CHARS = 6000;
+export const COMMIT_DIFF_MAX_CHARS = 12_000;
