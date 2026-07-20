@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { updateBranchFromRemote } from '@/domains/git/flows/updateBranchFromRemote.flow.js';
+import { isBranchUpdateAbortedError } from '@/domains/git/git.errors.js';
 import {
   abortRebase,
   checkoutBranch,
@@ -8,9 +10,6 @@ import {
   rebaseOntoRemoteBranch,
   remoteTrackingBranchExists,
 } from '@/domains/git/git.service.js';
-import { updateBranchSafely } from '@/domains/release/flows/updateBranchSafely.flow.js';
-import { isReleaseAbortedError } from '@/domains/release/release.errors.js';
-import { promptRebaseDivergedBranch } from '@/ui/prompts/git.prompts.js';
 
 vi.mock('@/domains/git/git.service.js', () => ({
   abortRebase: vi.fn(),
@@ -21,26 +20,23 @@ vi.mock('@/domains/git/git.service.js', () => ({
   remoteTrackingBranchExists: vi.fn(),
 }));
 
-vi.mock('@/ui/prompts/git.prompts.js', () => ({
-  promptRebaseDivergedBranch: vi.fn(),
-}));
-
 const mockedAbortRebase = vi.mocked(abortRebase);
 const mockedCheckoutBranch = vi.mocked(checkoutBranch);
 const mockedCountCommitsBetween = vi.mocked(countCommitsBetween);
 const mockedFetchBranchFromRemote = vi.mocked(fetchBranchFromRemote);
 const mockedRebaseOntoRemoteBranch = vi.mocked(rebaseOntoRemoteBranch);
 const mockedRemoteTrackingBranchExists = vi.mocked(remoteTrackingBranchExists);
-const mockedPromptRebaseDivergedBranch = vi.mocked(promptRebaseDivergedBranch);
 
 // countCommitsBetween(from, to) returns commits reachable from `to` not `from`.
-// updateBranchSafely queries behind first (branch..origin/branch), then ahead
+// updateBranchFromRemote queries behind first (branch..origin/branch), then ahead
 // (origin/branch..branch).
 const mockAheadBehind = (behind: number, ahead: number) => {
   mockedCountCommitsBetween.mockResolvedValueOnce(behind).mockResolvedValueOnce(ahead);
 };
 
-describe('updateBranchSafely', () => {
+describe('updateBranchFromRemote', () => {
+  let onDiverged: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -49,72 +45,76 @@ describe('updateBranchSafely', () => {
     mockedRemoteTrackingBranchExists.mockResolvedValue(true);
     mockedRebaseOntoRemoteBranch.mockResolvedValue(undefined);
     mockedAbortRebase.mockResolvedValue(undefined);
+
+    onDiverged = vi.fn();
   });
 
   it('fetches and checks out the branch before inspecting divergence', async () => {
     mockAheadBehind(0, 0);
 
-    await updateBranchSafely('develop');
+    await updateBranchFromRemote('develop', onDiverged);
 
     expect(mockedFetchBranchFromRemote).toHaveBeenCalledWith('origin', 'develop');
     expect(mockedCheckoutBranch).toHaveBeenCalledWith('develop');
   });
 
-  it('throws when the origin tracking branch is missing', async () => {
+  it('throws a plain Error when the origin tracking branch is missing', async () => {
     mockedRemoteTrackingBranchExists.mockResolvedValue(false);
 
-    await expect(updateBranchSafely('develop')).rejects.toThrow(
-      'origin/develop not found — cannot update develop.',
-    );
+    const error = await updateBranchFromRemote('develop', onDiverged).catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe('origin/develop not found — cannot update develop.');
+    expect(isBranchUpdateAbortedError(error)).toBe(false);
     expect(mockedRebaseOntoRemoteBranch).not.toHaveBeenCalled();
   });
 
   it('does nothing when the branch is up to date', async () => {
     mockAheadBehind(0, 0);
 
-    await updateBranchSafely('main');
+    await updateBranchFromRemote('main', onDiverged);
 
-    expect(mockedPromptRebaseDivergedBranch).not.toHaveBeenCalled();
+    expect(onDiverged).not.toHaveBeenCalled();
     expect(mockedRebaseOntoRemoteBranch).not.toHaveBeenCalled();
   });
 
   it('rebases silently when only behind (no prompt)', async () => {
     mockAheadBehind(5, 0);
 
-    await updateBranchSafely('main');
+    await updateBranchFromRemote('main', onDiverged);
 
-    expect(mockedPromptRebaseDivergedBranch).not.toHaveBeenCalled();
+    expect(onDiverged).not.toHaveBeenCalled();
     expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledWith('main');
   });
 
-  it('rebases when diverged and the user confirms', async () => {
+  it('rebases when diverged and the callback confirms', async () => {
     mockAheadBehind(5, 2);
-    mockedPromptRebaseDivergedBranch.mockResolvedValue(true);
+    onDiverged.mockResolvedValue(true);
 
-    await updateBranchSafely('develop');
+    await updateBranchFromRemote('develop', onDiverged);
 
-    expect(mockedPromptRebaseDivergedBranch).toHaveBeenCalledWith('develop', 2, 5);
+    expect(onDiverged).toHaveBeenCalledWith('develop', 2, 5);
     expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledWith('develop');
   });
 
-  it('throws ReleaseAbortedError when diverged and the user declines', async () => {
+  it('throws BranchUpdateAbortedError when diverged and the callback declines', async () => {
     mockAheadBehind(5, 2);
-    mockedPromptRebaseDivergedBranch.mockResolvedValue(false);
+    onDiverged.mockResolvedValue(false);
 
-    const error = await updateBranchSafely('develop').catch((err: unknown) => err);
+    const error = await updateBranchFromRemote('develop', onDiverged).catch((err: unknown) => err);
 
-    expect(isReleaseAbortedError(error)).toBe(true);
+    expect(isBranchUpdateAbortedError(error)).toBe(true);
     expect(mockedRebaseOntoRemoteBranch).not.toHaveBeenCalled();
   });
 
-  it('aborts the rebase and throws ReleaseAbortedError on conflict', async () => {
+  it('aborts the rebase and throws BranchUpdateAbortedError on conflict', async () => {
     mockAheadBehind(5, 2);
-    mockedPromptRebaseDivergedBranch.mockResolvedValue(true);
+    onDiverged.mockResolvedValue(true);
     mockedRebaseOntoRemoteBranch.mockRejectedValue(new Error('conflict'));
 
-    const error = await updateBranchSafely('develop').catch((err: unknown) => err);
+    const error = await updateBranchFromRemote('develop', onDiverged).catch((err: unknown) => err);
 
-    expect(isReleaseAbortedError(error)).toBe(true);
+    expect(isBranchUpdateAbortedError(error)).toBe(true);
     expect(mockedAbortRebase).toHaveBeenCalled();
   });
 });

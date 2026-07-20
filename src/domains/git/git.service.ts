@@ -12,14 +12,6 @@ export const checkoutBranch = async (branch: string) => {
   }
 };
 
-export const pullBranch = async (branch: string) => {
-  try {
-    await execa('git', ['pull', 'origin', branch]);
-  } catch (error) {
-    throw new Error(`Failed to pull branch ${branch}: ${(error as Error).message}`);
-  }
-};
-
 export const createBranch = async (branch: string) => {
   try {
     await execa('git', ['checkout', '-b', branch], { stdio: 'inherit' });
@@ -40,12 +32,6 @@ export const deleteLocalBranch = async (branch: string) => {
   } catch (error) {
     throw new Error(`Failed to delete branch ${branch}: ${(error as Error).message}`);
   }
-};
-
-export const checkoutAndCreateBranch = async (base: string, newBranch: string) => {
-  await checkoutBranch(base);
-  await pullBranch(base);
-  await createBranch(newBranch);
 };
 
 export const getStagedChangesDiff = async (): Promise<string> => {

@@ -2,8 +2,10 @@ import c from 'ansi-colors';
 import ora from 'ora';
 
 import { logger } from '@/infra/logger.js';
+import { promptRebaseDivergedBranch } from '@/ui/prompts/git.prompts.js';
 
-import { checkoutAndCreateBranch, remoteBranchExists } from '../git/git.service.js';
+import { checkoutAndCreateBranch } from '../git/flows/checkoutAndCreateBranch.flow.js';
+import { remoteBranchExists } from '../git/git.service.js';
 import { CLI_MODES } from '../mode/mode.constants.js';
 import { getCliModeConfig } from '../mode/mode.service.js';
 import { resolveBranchMeta } from './flows/resolveBranchMeta.flow.js';
@@ -24,8 +26,17 @@ export const runFeatureFlow = async () => {
   console.log('');
   const spinner = ora(`Creating branch from ${c.bold(baseBranch)}...`).start();
 
+  // Stop the spinner around the interactive prompt so ora and inquirer don't
+  // both write to the TTY at once and corrupt the output.
+  const onDiverged = async (divergedBranch: string, ahead: number, behind: number) => {
+    spinner.stop();
+    const shouldRebase = await promptRebaseDivergedBranch(divergedBranch, ahead, behind);
+    spinner.start();
+    return shouldRebase;
+  };
+
   try {
-    await checkoutAndCreateBranch(baseBranch, branch);
+    await checkoutAndCreateBranch(baseBranch, branch, onDiverged);
   } catch (error) {
     spinner.fail(`Git operation failed.`);
     logger.error((error as Error).message);
