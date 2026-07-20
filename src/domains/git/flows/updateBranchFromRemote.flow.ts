@@ -2,8 +2,8 @@ import { createBranchUpdateAbortedError } from '../git.errors.js';
 import {
   abortRebase,
   checkoutBranch,
-  countCommitsBetween,
   fetchBranchFromRemote,
+  getAheadBehind,
   rebaseOntoRemoteBranch,
   remoteTrackingBranchExists,
 } from '../git.service.js';
@@ -13,14 +13,14 @@ export const updateBranchFromRemote = async (
   onDiverged: (branch: string, ahead: number, behind: number) => Promise<boolean>,
 ): Promise<void> => {
   await fetchBranchFromRemote('origin', branch);
-  await checkoutBranch(branch);
 
   if (!(await remoteTrackingBranchExists(branch))) {
     throw new Error(`origin/${branch} not found — cannot update ${branch}.`);
   }
 
-  const behind = await countCommitsBetween(branch, `origin/${branch}`);
-  const ahead = await countCommitsBetween(`origin/${branch}`, branch);
+  await checkoutBranch(branch);
+
+  const { ahead, behind } = await getAheadBehind(branch);
 
   // Up-to-date or only ahead — nothing to pull in.
   if (behind === 0) {

@@ -224,6 +224,23 @@ export const countCommitsBetween = async (from: string, to: string): Promise<num
   return result.exitCode === 0 ? Number(result.stdout.trim()) || 0 : 0;
 };
 
+export const getAheadBehind = async (
+  branch: string,
+): Promise<{ ahead: number; behind: number }> => {
+  const result = await execa(
+    'git',
+    ['rev-list', '--left-right', '--count', `${branch}...origin/${branch}`],
+    { reject: false },
+  );
+
+  if (result.exitCode !== 0) {
+    return { ahead: 0, behind: 0 };
+  }
+
+  const [ahead, behind] = result.stdout.trim().split(/\s+/);
+  return { ahead: Number(ahead) || 0, behind: Number(behind) || 0 };
+};
+
 export const abortCherryPick = async (): Promise<void> => {
   try {
     await execa('git', ['cherry-pick', '--abort'], { stdio: 'inherit' });

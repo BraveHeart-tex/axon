@@ -5,8 +5,8 @@ import { isBranchUpdateAbortedError } from '@/domains/git/git.errors.js';
 import {
   abortRebase,
   checkoutBranch,
-  countCommitsBetween,
   fetchBranchFromRemote,
+  getAheadBehind,
   rebaseOntoRemoteBranch,
   remoteTrackingBranchExists,
 } from '@/domains/git/git.service.js';
@@ -14,24 +14,22 @@ import {
 vi.mock('@/domains/git/git.service.js', () => ({
   abortRebase: vi.fn(),
   checkoutBranch: vi.fn(),
-  countCommitsBetween: vi.fn(),
   fetchBranchFromRemote: vi.fn(),
+  getAheadBehind: vi.fn(),
   rebaseOntoRemoteBranch: vi.fn(),
   remoteTrackingBranchExists: vi.fn(),
 }));
 
 const mockedAbortRebase = vi.mocked(abortRebase);
 const mockedCheckoutBranch = vi.mocked(checkoutBranch);
-const mockedCountCommitsBetween = vi.mocked(countCommitsBetween);
+const mockedGetAheadBehind = vi.mocked(getAheadBehind);
 const mockedFetchBranchFromRemote = vi.mocked(fetchBranchFromRemote);
 const mockedRebaseOntoRemoteBranch = vi.mocked(rebaseOntoRemoteBranch);
 const mockedRemoteTrackingBranchExists = vi.mocked(remoteTrackingBranchExists);
 
-// countCommitsBetween(from, to) returns commits reachable from `to` not `from`.
-// updateBranchFromRemote queries behind first (branch..origin/branch), then ahead
-// (origin/branch..branch).
+// updateBranchFromRemote reads ahead/behind vs origin/<branch> in one call.
 const mockAheadBehind = (behind: number, ahead: number) => {
-  mockedCountCommitsBetween.mockResolvedValueOnce(behind).mockResolvedValueOnce(ahead);
+  mockedGetAheadBehind.mockResolvedValueOnce({ ahead, behind });
 };
 
 describe('updateBranchFromRemote', () => {
