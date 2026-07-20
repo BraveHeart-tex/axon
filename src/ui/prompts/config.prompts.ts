@@ -1,94 +1,110 @@
-import inquirer from 'inquirer';
+import { confirm, input, password, select, Separator } from '@inquirer/prompts';
+import c from 'ansi-colors';
 
-import {
-  CONFIG_SETTING_KEYS,
-  CONFIG_SETTING_LABELS,
-  CREDENTIAL_KEYS,
-} from '@/domains/config/config.constants.js';
-import { ConfigSettingKey, CredentialKey } from '@/domains/config/config.types.js';
+import type { ConfigEntry } from '@/domains/config/config.types.js';
+import { truncate } from '@/misc/truncate.js';
 
-type ConfigAction = 'set' | 'view' | 'delete' | 'list';
-type ConfigTarget = 'setting' | 'credential';
+const LABEL_WIDTH = 16;
+const VALUE_MAX_LENGTH = 45;
 
-export const promptConfigAction = () =>
-  inquirer.prompt<{ action: ConfigAction }>([
-    {
-      type: 'list',
-      name: 'action',
-      message: 'What do you want to do?',
-      choices: ['set', 'view', 'delete', 'list'],
-    },
-  ]);
+const selectTheme = {
+  prefix: c.cyan('?'),
+  icon: { cursor: c.cyan('❯') },
+  style: {
+    highlight: (text: string) => c.cyan.bold(text),
+  },
+};
 
-export const promptConfigTarget = () =>
-  inquirer.prompt<{ target: ConfigTarget }>([
-    {
-      type: 'list',
-      name: 'target',
-      message: 'What do you want to manage?',
-      choices: [
-        { name: 'Saved settings', value: 'setting' },
-        { name: 'API keys', value: 'credential' },
-      ],
-    },
-  ]);
+const renderValue = (entry: ConfigEntry): string => {
+  if (entry.kind === 'credential') {
+    return entry.isSet ? c.green('••• set') : c.dim('(unset)');
+  }
 
-export const promptCredentialName = () =>
-  inquirer.prompt<{ name: CredentialKey }>([
-    {
-      type: 'list',
-      name: 'name',
-      message: 'Select credential:',
-      choices: Object.values(CREDENTIAL_KEYS),
-    },
-  ]);
+  if (entry.value === null) {
+    return c.dim('(unset)');
+  }
 
-export const promptConfigSettingName = () =>
-  inquirer.prompt<{ name: ConfigSettingKey }>([
-    {
-      type: 'list',
-      name: 'name',
-      message: 'Select setting:',
-      choices: Object.values(CONFIG_SETTING_KEYS).map((key) => ({
-        name: CONFIG_SETTING_LABELS[key],
-        value: key,
-      })),
-    },
-  ]);
+  return c.white(truncate(entry.value, VALUE_MAX_LENGTH));
+};
 
-export const promptApiKey = (name: string) =>
-  inquirer.prompt<{ key: string }>([
-    {
-      type: 'password',
-      name: 'key',
-      message: `Enter API key for "${name}":`,
-    },
-  ]);
+const renderEntryChoice = (entry: ConfigEntry) => ({
+  name: `${entry.label.padEnd(LABEL_WIDTH)} ${renderValue(entry)}`,
+  value: entry,
+});
+
+export type EntryAction = 'set' | 'clear' | 'reveal' | 'back';
+
+export const promptConfigEntry = async (entries: ConfigEntry[]): Promise<ConfigEntry | 'exit'> => {
+  const settingChoices = entries.filter((entry) => entry.kind === 'setting').map(renderEntryChoice);
+  const credentialChoices = entries
+    .filter((entry) => entry.kind === 'credential')
+    .map(renderEntryChoice);
+
+  return await select<ConfigEntry | 'exit'>({
+    message: 'Axon config',
+    loop: false,
+    pageSize: 20,
+    theme: selectTheme,
+    choices: [
+      new Separator(`\n  ${c.bold('Settings')}`),
+      ...settingChoices,
+      new Separator(`\n  ${c.bold('Credentials')}`),
+      ...credentialChoices,
+      new Separator(' '),
+      { name: 'Exit', value: 'exit' },
+    ],
+  });
+};
+
+export const promptEntryAction = async (entry: ConfigEntry): Promise<EntryAction> => {
+  const noun = entry.isSecret ? 'key' : 'value';
+  const choices: { name: string; value: EntryAction }[] = [];
+
+  if (!entry.isSet) {
+    choices.push({ name: `Set ${noun}`, value: 'set' });
+  } else {
+    choices.push({ name: `Change ${noun}`, value: 'set' });
+    if (entry.isSecret) {
+      choices.push({ name: 'Reveal', value: 'reveal' });
+    }
+    choices.push({ name: 'Clear', value: 'clear' });
+  }
+
+  choices.push({ name: 'Back', value: 'back' });
+
+  return await select<EntryAction>({
+    message: entry.label,
+    theme: selectTheme,
+    choices,
+  });
+};
+
+export const confirmClearEntry = async (label: string): Promise<boolean> =>
+  await confirm({
+    message: `Clear ${c.bold(label)}?`,
+    default: false,
+  });
 
 export const promptConfigValue = async (
   message: string,
   validate?: (input: string) => boolean | string,
+  defaultValue?: string,
 ) => {
-  const { value } = await inquirer.prompt<{ value: string }>([
-    {
-      type: 'input',
-      name: 'value',
-      message,
-      validate: validate ?? ((input) => input.length > 0),
-    },
-  ]);
+  const value = await input({
+    message,
+    default: defaultValue,
+    validate: validate ?? ((input) => input.length > 0),
+  });
+
   return value;
 };
 
 export const promptSecretValue = async (message: string) => {
-  const { key } = await inquirer.prompt<{ key: string }>([
-    {
-      type: 'password',
-      name: 'key',
-      message,
-      mask: '*',
-      validate: (input) => input.length > 0,
-    },
-  ]);
+  const key = await password({
+    message,
+    mask: '*',
+    validate: (input) => input.length > 0,
+  });
+
   return key;
 };

@@ -1,68 +1,75 @@
 import {
   deleteConfigSetting,
   deleteCredential,
-  listConfigSettings,
-  listCredentials,
+  getConfigEntries,
   setConfigSetting,
   setCredential,
   validateConfigSetting,
-  viewConfigSetting,
   viewCredential,
 } from '@/domains/config/config.service.js';
+import type { ConfigEntry, CredentialEntry, SettingEntry } from '@/domains/config/config.types.js';
 import {
-  promptApiKey,
-  promptConfigAction,
-  promptConfigSettingName,
-  promptConfigTarget,
+  confirmClearEntry,
+  type EntryAction,
+  promptConfigEntry,
   promptConfigValue,
-  promptCredentialName,
+  promptEntryAction,
+  promptSecretValue,
 } from '@/ui/prompts/config.prompts.js';
 
-export const configCommand = async () => {
-  const { action } = await promptConfigAction();
-
-  if (action === 'list') {
-    listConfigSettings();
-    listCredentials();
+const handleSetting = async (entry: SettingEntry, action: EntryAction): Promise<void> => {
+  if (action === 'set') {
+    const value = await promptConfigValue(
+      `Enter value for "${entry.label}":`,
+      (input) => validateConfigSetting(entry.key, input),
+      entry.value ?? undefined,
+    );
+    setConfigSetting(entry.key, value);
     return;
   }
 
-  const { target } = await promptConfigTarget();
+  if (action === 'clear' && (await confirmClearEntry(entry.label))) {
+    deleteConfigSetting(entry.key);
+  }
+};
 
-  if (target === 'setting') {
-    const { name } = await promptConfigSettingName();
-
-    switch (action) {
-      case 'set': {
-        const value = await promptConfigValue(`Enter value for "${name}":`, (input) =>
-          validateConfigSetting(name, input),
-        );
-        setConfigSetting(name, value);
-        break;
-      }
-      case 'view':
-        viewConfigSetting(name);
-        break;
-      case 'delete':
-        deleteConfigSetting(name);
-        break;
-    }
+const handleCredential = async (entry: CredentialEntry, action: EntryAction): Promise<void> => {
+  if (action === 'set') {
+    const key = await promptSecretValue(`Enter ${entry.label}:`);
+    await setCredential(entry.key, key);
     return;
   }
 
-  const { name } = await promptCredentialName();
+  if (action === 'reveal') {
+    await viewCredential(entry.key);
+    return;
+  }
 
-  switch (action) {
-    case 'set': {
-      const { key } = await promptApiKey(name);
-      await setCredential(name, key);
-      break;
-    }
-    case 'view':
-      await viewCredential(name);
-      break;
-    case 'delete':
-      await deleteCredential(name);
-      break;
+  if (action === 'clear' && (await confirmClearEntry(entry.label))) {
+    await deleteCredential(entry.key);
+  }
+};
+
+const handleEntry = async (entry: ConfigEntry): Promise<void> => {
+  const action = await promptEntryAction(entry);
+
+  if (action === 'back') return;
+
+  if (entry.kind === 'setting') {
+    await handleSetting(entry, action);
+    return;
+  }
+
+  await handleCredential(entry, action);
+};
+
+export const configCommand = async (): Promise<void> => {
+  while (true) {
+    const entries = getConfigEntries();
+    const selected = await promptConfigEntry(entries);
+
+    if (selected === 'exit') return;
+
+    await handleEntry(selected);
   }
 };

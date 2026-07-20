@@ -14,3 +14,8 @@ export const CONFIG_SETTING_LABELS = {
   [CONFIG_SETTING_KEYS.JIRA_JQL]: 'Jira JQL',
   [CONFIG_SETTING_KEYS.JIRA_EMAIL]: 'Jira email',
 } as const;
+
+export const CREDENTIAL_LABELS = {
+  [CREDENTIAL_KEYS.AI]: 'AI API key',
+  [CREDENTIAL_KEYS.JIRA_API]: 'Jira API key',
+} as const;

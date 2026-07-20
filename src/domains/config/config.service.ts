@@ -2,16 +2,42 @@ import { ConfigManager } from '@/infra/config/configManager.js';
 import { logger } from '@/infra/logger.js';
 
 import { JIRA_CLOUD_URL_REGEX } from '../jira/jira.constants.js';
-import { CONFIG_SETTING_LABELS } from './config.constants.js';
-import { ConfigSettingKey, CredentialKey } from './config.types.js';
+import {
+  CONFIG_SETTING_KEYS,
+  CONFIG_SETTING_LABELS,
+  CREDENTIAL_KEYS,
+  CREDENTIAL_LABELS,
+} from './config.constants.js';
+import { ConfigEntry, ConfigSettingKey, CredentialKey } from './config.types.js';
 
-export const listConfigSettings = () => {
-  const settings = Object.entries(CONFIG_SETTING_LABELS).map(([key, label]) => {
-    const value = ConfigManager.get(key as ConfigSettingKey);
-    return `${label}: ${value || '(unset)'}`;
+export const getConfigEntries = (): ConfigEntry[] => {
+  const settingEntries = Object.values(CONFIG_SETTING_KEYS).map((key): ConfigEntry => {
+    const raw = ConfigManager.get(key);
+    const value = typeof raw === 'string' ? raw.trim() : '';
+
+    return {
+      kind: 'setting',
+      key,
+      label: CONFIG_SETTING_LABELS[key],
+      isSecret: false,
+      isSet: value !== '',
+      value: value !== '' ? value : null,
+    };
   });
 
-  logger.info(`Saved settings:\n${settings.join('\n')}`);
+  const storedSecrets = new Set(ConfigManager.listSecrets());
+  const credentialEntries = Object.values(CREDENTIAL_KEYS).map(
+    (key): ConfigEntry => ({
+      kind: 'credential',
+      key,
+      label: CREDENTIAL_LABELS[key],
+      isSecret: true,
+      isSet: storedSecrets.has(key),
+      value: null,
+    }),
+  );
+
+  return [...settingEntries, ...credentialEntries];
 };
 
 export const setConfigSetting = (name: ConfigSettingKey, value: string) => {
@@ -25,21 +51,9 @@ export const setConfigSetting = (name: ConfigSettingKey, value: string) => {
   logger.info(`Setting "${CONFIG_SETTING_LABELS[name]}" saved.`);
 };
 
-export const viewConfigSetting = (name: ConfigSettingKey) => {
-  const value = ConfigManager.get(name);
-  if (value) logger.info(`${CONFIG_SETTING_LABELS[name]}: ${value}`);
-  else logger.info(`No value found for "${CONFIG_SETTING_LABELS[name]}".`);
-};
-
 export const deleteConfigSetting = (name: ConfigSettingKey) => {
   ConfigManager.set(name, '');
   logger.info(`Setting "${CONFIG_SETTING_LABELS[name]}" cleared.`);
-};
-
-export const listCredentials = () => {
-  const keys = ConfigManager.listSecrets();
-  if (keys.length === 0) logger.info('No keys stored yet.');
-  else logger.info(`Stored keys: ${keys.join(', ')}`);
 };
 
 export const setCredential = async (name: CredentialKey, key: string) => {
