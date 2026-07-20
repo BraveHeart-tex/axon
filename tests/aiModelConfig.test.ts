@@ -20,9 +20,9 @@ describe('resolveAiModel', () => {
   });
 
   it('prefers the environment variable over saved config', () => {
-    process.env[AI_MODEL_ENV_KEY] = AI_MODELS.QWEN3_32B;
+    process.env[AI_MODEL_ENV_KEY] = AI_MODELS.GPT_OSS_120B;
 
-    expect(resolveAiModel()).toBe(AI_MODELS.QWEN3_32B);
+    expect(resolveAiModel()).toBe(AI_MODELS.GPT_OSS_120B);
 
     delete process.env[AI_MODEL_ENV_KEY];
   });
