@@ -32,8 +32,16 @@ describe('checkoutAndCreateBranch', () => {
   it('updates the base branch, forwarding the onDiverged callback, then creates the new branch', async () => {
     await checkoutAndCreateBranch('develop', 'feat/JIRA-1', onDiverged);
 
-    expect(mockedUpdateBranchFromRemote).toHaveBeenCalledWith('develop', onDiverged);
+    expect(mockedUpdateBranchFromRemote).toHaveBeenCalledWith('develop', onDiverged, {});
     expect(mockedCreateBranch).toHaveBeenCalledWith('feat/JIRA-1');
+  });
+
+  it('forwards options (e.g. skipFetch) to the base update', async () => {
+    await checkoutAndCreateBranch('develop', 'feat/JIRA-1', onDiverged, { skipFetch: true });
+
+    expect(mockedUpdateBranchFromRemote).toHaveBeenCalledWith('develop', onDiverged, {
+      skipFetch: true,
+    });
   });
 
   it('creates the new branch only after the base update succeeds', async () => {
