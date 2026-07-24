@@ -19,7 +19,7 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
   const { branchTitle, commits } = plan;
 
   // --- Update main (may prompt to rebase — must run before any spinner) ---
-  await updateBranchSafely('main');
+  await updateBranchSafely('main', { skipFetch: true });
 
   // --- Create release branch ---
   const branchExists = await localBranchExists(branchTitle);

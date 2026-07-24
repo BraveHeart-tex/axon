@@ -11,8 +11,13 @@ import {
 export const updateBranchFromRemote = async (
   branch: string,
   onDiverged: (branch: string, ahead: number, behind: number) => Promise<boolean>,
+  options: { skipFetch?: boolean } = {},
 ): Promise<void> => {
-  await fetchBranchFromRemote('origin', branch);
+  const { skipFetch = false } = options;
+
+  if (!skipFetch) {
+    await fetchBranchFromRemote('origin', branch);
+  }
 
   if (!(await remoteTrackingBranchExists(branch))) {
     throw new Error(`origin/${branch} not found — cannot update ${branch}.`);

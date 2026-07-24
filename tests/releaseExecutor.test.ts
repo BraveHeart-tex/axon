@@ -96,7 +96,7 @@ describe('executeRelease', () => {
   it('updates main before creating the release branch', async () => {
     await executeRelease(plan);
 
-    expect(mockedUpdateBranchSafely).toHaveBeenCalledWith('main');
+    expect(mockedUpdateBranchSafely).toHaveBeenCalledWith('main', { skipFetch: true });
     expect(mockedCreateBranch).toHaveBeenCalledWith(RELEASE_BRANCH);
     expect(mockedUpdateBranchSafely.mock.invocationCallOrder[0]).toBeLessThan(
       mockedCreateBranch.mock.invocationCallOrder[0]!,

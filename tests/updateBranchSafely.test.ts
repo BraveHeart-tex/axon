@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   abortRebase,
   checkoutBranch,
-  countCommitsBetween,
   fetchBranchFromRemote,
+  getAheadBehind,
   rebaseOntoRemoteBranch,
   remoteTrackingBranchExists,
 } from '@/domains/git/git.service.js';
@@ -15,8 +15,8 @@ import { promptRebaseDivergedBranch } from '@/ui/prompts/git.prompts.js';
 vi.mock('@/domains/git/git.service.js', () => ({
   abortRebase: vi.fn(),
   checkoutBranch: vi.fn(),
-  countCommitsBetween: vi.fn(),
   fetchBranchFromRemote: vi.fn(),
+  getAheadBehind: vi.fn(),
   rebaseOntoRemoteBranch: vi.fn(),
   remoteTrackingBranchExists: vi.fn(),
 }));
@@ -27,17 +27,15 @@ vi.mock('@/ui/prompts/git.prompts.js', () => ({
 
 const mockedAbortRebase = vi.mocked(abortRebase);
 const mockedCheckoutBranch = vi.mocked(checkoutBranch);
-const mockedCountCommitsBetween = vi.mocked(countCommitsBetween);
+const mockedGetAheadBehind = vi.mocked(getAheadBehind);
 const mockedFetchBranchFromRemote = vi.mocked(fetchBranchFromRemote);
 const mockedRebaseOntoRemoteBranch = vi.mocked(rebaseOntoRemoteBranch);
 const mockedRemoteTrackingBranchExists = vi.mocked(remoteTrackingBranchExists);
 const mockedPromptRebaseDivergedBranch = vi.mocked(promptRebaseDivergedBranch);
 
-// countCommitsBetween(from, to) returns commits reachable from `to` not `from`.
-// updateBranchSafely queries behind first (branch..origin/branch), then ahead
-// (origin/branch..branch).
+// updateBranchSafely reads ahead/behind vs origin/<branch> in one call.
 const mockAheadBehind = (behind: number, ahead: number) => {
-  mockedCountCommitsBetween.mockResolvedValueOnce(behind).mockResolvedValueOnce(ahead);
+  mockedGetAheadBehind.mockResolvedValueOnce({ ahead, behind });
 };
 
 describe('updateBranchSafely', () => {
@@ -58,6 +56,15 @@ describe('updateBranchSafely', () => {
 
     expect(mockedFetchBranchFromRemote).toHaveBeenCalledWith('origin', 'develop');
     expect(mockedCheckoutBranch).toHaveBeenCalledWith('develop');
+  });
+
+  it('skips fetching when skipFetch is set but still checks out the branch', async () => {
+    mockAheadBehind(0, 0);
+
+    await updateBranchSafely('main', { skipFetch: true });
+
+    expect(mockedFetchBranchFromRemote).not.toHaveBeenCalled();
+    expect(mockedCheckoutBranch).toHaveBeenCalledWith('main');
   });
 
   it('throws when the origin tracking branch is missing', async () => {

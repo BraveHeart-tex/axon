@@ -4,9 +4,12 @@ import { promptRebaseDivergedBranch } from '@/ui/prompts/git.prompts.js';
 
 import { createReleaseAbortedError } from '../release.errors.js';
 
-export const updateBranchSafely = async (branch: string): Promise<void> => {
+export const updateBranchSafely = async (
+  branch: string,
+  options: { skipFetch?: boolean } = {},
+): Promise<void> => {
   try {
-    await updateBranchFromRemote(branch, promptRebaseDivergedBranch);
+    await updateBranchFromRemote(branch, promptRebaseDivergedBranch, options);
   } catch (err) {
     if (isBranchUpdateAbortedError(err)) {
       throw createReleaseAbortedError((err as Error).message);

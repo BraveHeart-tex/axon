@@ -137,8 +137,8 @@ export const getCurrentBranchNameForWorktree = async () => {
   return stdout.trim();
 };
 
-export const fetchBranchFromRemote = async (remote: string, branch: string) => {
-  await execa('git', ['fetch', remote, branch]);
+export const fetchBranchFromRemote = async (remote: string, ...branches: string[]) => {
+  await execa('git', ['fetch', remote, ...branches]);
 };
 
 export const fetchOriginPrune = async () => {

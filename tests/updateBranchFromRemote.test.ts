@@ -56,6 +56,15 @@ describe('updateBranchFromRemote', () => {
     expect(mockedCheckoutBranch).toHaveBeenCalledWith('develop');
   });
 
+  it('skips fetching when skipFetch is set but still checks out the branch', async () => {
+    mockAheadBehind(0, 0);
+
+    await updateBranchFromRemote('develop', onDiverged, { skipFetch: true });
+
+    expect(mockedFetchBranchFromRemote).not.toHaveBeenCalled();
+    expect(mockedCheckoutBranch).toHaveBeenCalledWith('develop');
+  });
+
   it('throws a plain Error when the origin tracking branch is missing', async () => {
     mockedRemoteTrackingBranchExists.mockResolvedValue(false);
 

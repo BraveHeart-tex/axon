@@ -25,17 +25,27 @@ export const resolveReleaseInput = async (options: ReleaseOptions): Promise<Rele
   ]);
 
   if (pickMethod === 'manual') {
+    const spinner = ora('Updating main...').start();
+    try {
+      await fetchBranchFromRemote('origin', 'main');
+      spinner.succeed('Fetched latest main.');
+    } catch (err) {
+      spinner.fail('Failed to fetch main.');
+      throw err;
+    }
     return resolveManualRelease();
   }
 
+  // Single combined fetch for main + develop — must run before the develop update
+  // and before the spinner starts.
+  await fetchBranchFromRemote('origin', 'main', 'develop');
+
   // Interactive (may prompt to rebase) — must run before the spinner starts.
-  await updateBranchSafely('develop');
+  await updateBranchSafely('develop', { skipFetch: true });
 
   const spinner = ora('Updating main...').start();
 
   try {
-    await fetchBranchFromRemote('origin', 'main');
-
     spinner.text = 'Fetching recent commits from develop...';
     const recentCommits = await getRecentCommitsForDevelop({
       limit: 50,
