@@ -26,6 +26,21 @@ export const localBranchExists = async (branch: string) => {
   return result.stdout.trim().length > 0;
 };
 
+export const checkoutOrCreateTrackingBranch = async (branch: string) => {
+  if (await localBranchExists(branch)) {
+    await checkoutBranch(branch);
+    return;
+  }
+
+  try {
+    await execa('git', ['checkout', '-b', branch, '--track', `origin/${branch}`], {
+      stdio: 'inherit',
+    });
+  } catch (error) {
+    throw new Error(`Failed to checkout branch ${branch}: ${(error as Error).message}`);
+  }
+};
+
 export const deleteLocalBranch = async (branch: string) => {
   try {
     await execa('git', ['branch', '-D', branch], { stdio: 'inherit' });

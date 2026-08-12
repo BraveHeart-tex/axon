@@ -87,6 +87,14 @@ const syncBranch = async (target?: string) => {
     }
   }
 
+  await performRebaseAndPush(currentBranch, targetBranch, { interactive: true });
+};
+
+export const performRebaseAndPush = async (
+  currentBranch: string,
+  targetBranch: string,
+  { interactive }: { interactive: boolean },
+) => {
   if (!(await remoteTrackingBranchExists(targetBranch))) {
     logger.warn(`origin/${targetBranch} not found — rebase may fail.`);
   }
@@ -97,6 +105,11 @@ const syncBranch = async (target?: string) => {
     await rebaseOntoRemoteBranch(targetBranch);
   } catch {
     logger.warn(`Rebase onto origin/${targetBranch} failed.`);
+
+    if (!interactive) {
+      await abortRebase();
+      throw new Error(`Rebase of ${currentBranch} onto origin/${targetBranch} failed.`);
+    }
 
     const useInteractive = await confirm({
       message: 'Start an interactive rebase instead, so you can resolve conflicts step by step?',
