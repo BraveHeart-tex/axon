@@ -118,7 +118,7 @@ const generateMessage = async (
 ): Promise<string> => {
   const raw = await generateAiResponse({
     apiKey,
-    messages: getCommitMessagePrompt(context, previousMessages, feedback),
+    ...getCommitMessagePrompt(context, previousMessages, feedback),
   });
 
   return normalizeGeneratedCommitMessage(raw, context);

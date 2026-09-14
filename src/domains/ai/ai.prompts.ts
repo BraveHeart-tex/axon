@@ -42,7 +42,7 @@ export const getCommitMessagePrompt = (
   context: CommitContext,
   previousMessages: string[] = [],
   feedback?: string,
-): AiMessage[] => {
+): { system: string; messages: AiMessage[] } => {
   const diffTruncated =
     context.diff.length > COMMIT_DIFF_MAX_CHARS
       ? context.diff.slice(0, context.diff.lastIndexOf('\n', COMMIT_DIFF_MAX_CHARS))
@@ -61,14 +61,12 @@ export const getCommitMessagePrompt = (
     ? `\n## USER FEEDBACK FOR REGENERATION\nBased on the previous attempts, the user gave this instruction: "${feedback}". Follow this strictly.`
     : '';
 
-  return [
-    {
-      role: 'system',
-      content: SYSTEM_PROMPT,
-    },
-    {
-      role: 'user',
-      content: `
+  return {
+    system: SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: `
 ## Diff
 ${diffTruncated}
 ## Branch context
@@ -80,7 +78,8 @@ ${context.userHint ? `\n## My stated reason\n${context.userHint}` : '\n## My sta
 ${previousAttemptsSection}
 ${feedbackSection}
 Write the commit message now.
-      `.trim(),
-    },
-  ];
+        `.trim(),
+      },
+    ],
+  };
 };

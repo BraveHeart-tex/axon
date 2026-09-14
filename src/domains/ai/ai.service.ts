@@ -16,7 +16,7 @@ const createAiModel = (apiKey: string) => {
 };
 
 export interface AiMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'user' | 'assistant';
   content: string;
 }
 
@@ -46,15 +46,18 @@ const getGroqOptions = (
 
 export const generateAiResponse = async ({
   apiKey,
+  system,
   messages,
 }: {
   apiKey: string;
+  system: string;
   messages: AiMessage[];
 }): Promise<string> => {
   const { model, modelId } = createAiModel(apiKey);
 
   const { text } = await generateText({
     model,
+    system,
     messages,
     temperature: 0.2,
 
