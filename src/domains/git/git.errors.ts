@@ -1,4 +1,4 @@
-export interface BranchUpdateAbortedError extends Error {
+interface BranchUpdateAbortedError extends Error {
   isBranchUpdateAborted: true;
 }
 
@@ -9,4 +9,5 @@ export const createBranchUpdateAbortedError = (message: string): BranchUpdateAbo
 };
 
 export const isBranchUpdateAbortedError = (error: unknown): error is BranchUpdateAbortedError =>
-  error instanceof Error && (error as Partial<BranchUpdateAbortedError>).isBranchUpdateAborted === true;
+  error instanceof Error &&
+  (error as Partial<BranchUpdateAbortedError>).isBranchUpdateAborted === true;

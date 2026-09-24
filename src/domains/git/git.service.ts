@@ -1,8 +1,12 @@
+import { existsSync } from 'node:fs';
+
 import { execa } from 'execa';
 
 import { JIRA_REGEX } from '../jira/jira.constants.js';
 import { formatCommits } from './git.formatter.js';
 import { RecentCommit } from './git.types.js';
+
+type GitCallOptions = { cancelSignal?: AbortSignal };
 
 export const checkoutBranch = async (branch: string) => {
   try {
@@ -26,19 +30,40 @@ export const localBranchExists = async (branch: string) => {
   return result.stdout.trim().length > 0;
 };
 
-export const checkoutOrCreateTrackingBranch = async (branch: string) => {
-  if (await localBranchExists(branch)) {
-    await checkoutBranch(branch);
-    return;
-  }
-
+export const checkoutDetached = async (ref: string, { cancelSignal }: GitCallOptions = {}) => {
   try {
-    await execa('git', ['checkout', '-b', branch, '--track', `origin/${branch}`], {
-      stdio: 'inherit',
-    });
+    await execa('git', ['checkout', '--detach', ref], { cancelSignal });
   } catch (error) {
-    throw new Error(`Failed to checkout branch ${branch}: ${(error as Error).message}`);
+    throw new Error(`Failed to checkout ${ref}: ${(error as Error).message}`);
   }
+};
+
+export const resolveCommitSha = async (ref: string) => {
+  const result = await execa('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
+    reject: false,
+  });
+
+  return result.exitCode === 0 ? result.stdout.trim() : '';
+};
+
+export const updateLocalBranchRef = async (branch: string, newSha: string, oldSha: string) => {
+  try {
+    await execa('git', ['update-ref', `refs/heads/${branch}`, newSha, oldSha]);
+  } catch (error) {
+    throw new Error(`Failed to update local branch ${branch}: ${(error as Error).message}`);
+  }
+};
+
+export const getCheckedOutBranches = async (): Promise<Set<string>> => {
+  const { stdout } = await execa('git', ['worktree', 'list', '--porcelain']);
+  const prefix = 'branch refs/heads/';
+
+  return new Set(
+    stdout
+      .split('\n')
+      .filter((line) => line.startsWith(prefix))
+      .map((line) => line.slice(prefix.length)),
+  );
 };
 
 export const deleteLocalBranch = async (branch: string) => {
@@ -156,8 +181,8 @@ export const fetchBranchFromRemote = async (remote: string, ...branches: string[
   await execa('git', ['fetch', remote, ...branches]);
 };
 
-export const fetchOriginPrune = async () => {
-  await execa('git', ['fetch', 'origin', '--prune'], { stdio: 'inherit' });
+export const fetchOriginPrune = async ({ cancelSignal }: GitCallOptions = {}) => {
+  await execa('git', ['fetch', 'origin', '--prune'], { stdio: 'inherit', cancelSignal });
 };
 
 export const isWorkingTreeDirty = async () => {
@@ -173,8 +198,14 @@ export const isWorkingTreeDirty = async () => {
 // local commits already integrated upstream under a different SHA (squash-merge, force-push),
 // instead of replaying them and hitting spurious conflicts. Without it an explicit-upstream
 // rebase defaults to --no-fork-point and fails where `git pull --rebase` succeeds.
-export const rebaseOntoRemoteBranch = async (branchName: string) => {
-  await execa('git', ['rebase', '--fork-point', `origin/${branchName}`], { stdio: 'inherit' });
+export const rebaseOntoRemoteBranch = async (
+  branchName: string,
+  { cancelSignal }: GitCallOptions = {},
+) => {
+  await execa('git', ['rebase', '--fork-point', `origin/${branchName}`], {
+    stdio: 'inherit',
+    cancelSignal,
+  });
 };
 
 export const rebaseOntoRemoteBranchInteractive = async (branchName: string) => {
@@ -185,6 +216,26 @@ export const rebaseOntoRemoteBranchInteractive = async (branchName: string) => {
 
 export const abortRebase = async () => {
   await execa('git', ['rebase', '--abort'], { stdio: 'inherit', reject: false });
+};
+
+export const abortRebaseStrict = async () => {
+  try {
+    await execa('git', ['rebase', '--abort'], { stdio: 'inherit' });
+  } catch (error) {
+    throw new Error(`Failed to abort rebase: ${(error as Error).message}`);
+  }
+};
+
+export const isRebaseInProgress = async () => {
+  const { stdout } = await execa('git', [
+    'rev-parse',
+    '--git-path',
+    'rebase-merge',
+    '--git-path',
+    'rebase-apply',
+  ]);
+
+  return stdout.split('\n').some((gitPath) => existsSync(gitPath.trim()));
 };
 
 export const inferJiraScopeFromBranch = (branch: string) => {
@@ -239,6 +290,24 @@ export const countCommitsBetween = async (from: string, to: string): Promise<num
   return result.exitCode === 0 ? Number(result.stdout.trim()) || 0 : 0;
 };
 
+const countRevisionsStrict = async (...args: string[]): Promise<number> => {
+  try {
+    const { stdout } = await execa('git', ['rev-list', '--count', ...args]);
+    return Number(stdout.trim());
+  } catch (error) {
+    throw new Error(
+      `Failed to count commits with \`git rev-list --count ${args.join(' ')}\`: ${(error as Error).message}`,
+    );
+  }
+};
+
+export const countCommitsMissingLocally = (branch: string) =>
+  countRevisionsStrict(`refs/heads/${branch}..refs/remotes/origin/${branch}`);
+
+// Commits that are only rebased copies of the remote's (same patch) don't count as local-only.
+export const countLocalOnlyCommits = (remoteSha: string, localSha: string) =>
+  countRevisionsStrict('--cherry-pick', '--right-only', `${remoteSha}...${localSha}`);
+
 export const getAheadBehind = async (
   branch: string,
 ): Promise<{ ahead: number; behind: number }> => {
@@ -272,6 +341,20 @@ export const pushCurrentBranch = async (): Promise<void> => {
   await execa('git', ['push'], { stdio: 'inherit' });
 };
 
-export const pushCurrentBranchWithLease = async (): Promise<void> => {
-  await execa('git', ['push', '--force-with-lease'], { stdio: 'inherit' });
+// An empty expectedSha leases "the branch must not exist on the remote yet".
+export const pushHeadWithLease = async (
+  branch: string,
+  expectedSha: string,
+  { cancelSignal }: GitCallOptions = {},
+): Promise<void> => {
+  await execa(
+    'git',
+    [
+      'push',
+      `--force-with-lease=refs/heads/${branch}:${expectedSha}`,
+      'origin',
+      `HEAD:refs/heads/${branch}`,
+    ],
+    { stdio: 'inherit', cancelSignal },
+  );
 };

@@ -1,4 +1,4 @@
-export interface ReleaseAbortedError extends Error {
+interface ReleaseAbortedError extends Error {
   isReleaseAborted: true;
 }
 

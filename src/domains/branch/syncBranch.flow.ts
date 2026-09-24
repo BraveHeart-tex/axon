@@ -3,13 +3,15 @@ import c from 'ansi-colors';
 
 import {
   abortRebase,
+  countCommitsMissingLocally,
   fetchOriginPrune,
   getCurrentBranchNameForWorktree,
   isWorkingTreeDirty,
-  pushCurrentBranchWithLease,
+  pushHeadWithLease,
   rebaseOntoRemoteBranch,
   rebaseOntoRemoteBranchInteractive,
   remoteTrackingBranchExists,
+  resolveCommitSha,
 } from '@/domains/git/git.service.js';
 import { logger } from '@/infra/logger.js';
 
@@ -40,6 +42,21 @@ const syncBranch = async (target?: string) => {
   }
 
   await fetchOriginPrune();
+
+  const remoteSha = await resolveCommitSha(`refs/remotes/origin/${currentBranch}`);
+
+  if (remoteSha) {
+    const missing = await countCommitsMissingLocally(currentBranch);
+
+    if (missing > 0) {
+      logger.error(
+        `origin/${currentBranch} has ${missing} commit(s) you don't have locally. Run git pull --rebase first.`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
   const targetBranch = target ? target.trim() : await resolveSyncTarget(currentBranch);
 
   if (!targetBranch) {
@@ -87,13 +104,13 @@ const syncBranch = async (target?: string) => {
     }
   }
 
-  await performRebaseAndPush(currentBranch, targetBranch, { interactive: true });
+  await performRebaseAndPush(currentBranch, targetBranch, remoteSha);
 };
 
-export const performRebaseAndPush = async (
+const performRebaseAndPush = async (
   currentBranch: string,
   targetBranch: string,
-  { interactive }: { interactive: boolean },
+  remoteSha: string,
 ) => {
   if (!(await remoteTrackingBranchExists(targetBranch))) {
     logger.warn(`origin/${targetBranch} not found — rebase may fail.`);
@@ -105,11 +122,6 @@ export const performRebaseAndPush = async (
     await rebaseOntoRemoteBranch(targetBranch);
   } catch {
     logger.warn(`Rebase onto origin/${targetBranch} failed.`);
-
-    if (!interactive) {
-      await abortRebase();
-      throw new Error(`Rebase of ${currentBranch} onto origin/${targetBranch} failed.`);
-    }
 
     const useInteractive = await confirm({
       message: 'Start an interactive rebase instead, so you can resolve conflicts step by step?',
@@ -126,7 +138,7 @@ export const performRebaseAndPush = async (
   }
 
   logger.info('Pushing with --force-with-lease');
-  await pushCurrentBranchWithLease();
+  await pushHeadWithLease(currentBranch, remoteSha);
 
   logger.success(`Synced ${currentBranch} with origin/${targetBranch}.`);
 };

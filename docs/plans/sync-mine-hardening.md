@@ -27,15 +27,15 @@
 
 ## Terms
 
-| Term                 | Meaning                                                                                                              |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| MR                   | A GitLab merge request in the repo where `axon` is being run (not this repo)                                         |
-| `<src>` / `<target>` | An MR's source branch and target branch                                                                              |
-| Stacked MR           | An MR whose `<target>` is another listed MR's `<src>`. The other MR is its parent.                                   |
-| Local-only commits   | Commits on the local `<src>` that `origin/<src>` doesn't have (`git rev-list --count origin/<src>..<src>` > 0)       |
-| Lease                | `--force-with-lease=refs/heads/<b>:<sha>`: the push succeeds only if the remote branch is still at `<sha>`           |
-| Fork point           | `git merge-base --fork-point origin/<target> <branch>`: where the branch left its target, worked out from the reflog |
-| `<gcd>`              | The output of `git rev-parse --git-common-dir`, the shared `.git` folder even inside a linked worktree               |
+| Term                 | Meaning                                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MR                   | A GitLab merge request in the repo where `axon` is being run (not this repo)                                                                                            |
+| `<src>` / `<target>` | An MR's source branch and target branch                                                                                                                                 |
+| Stacked MR           | An MR whose `<target>` is another listed MR's `<src>`. The other MR is its parent.                                                                                      |
+| Local-only commits   | Commits on the local `<src>` that `origin/<src>` doesn't have, not counting rebased copies (`git rev-list --count --cherry-pick --right-only origin/<src>...<src>` > 0) |
+| Lease                | `--force-with-lease=refs/heads/<b>:<sha>`: the push succeeds only if the remote branch is still at `<sha>`                                                              |
+| Fork point           | `git merge-base --fork-point origin/<target> <branch>`: where the branch left its target, worked out from the reflog                                                    |
+| `<gcd>`              | The output of `git rev-parse --git-common-dir`, the shared `.git` folder even inside a linked worktree                                                                  |
 
 ## Current code
 
@@ -81,46 +81,46 @@ These were tested against a bare origin in a scratch repo. Rely on them rather t
 
 For each MR, in order:
 
-- [ ] `git checkout --detach origin/<src>`
-- [ ] If a local `<src>` exists and has local-only commits, mark the MR `skipped (local-only commits)`, leave the branch alone, and move to the next MR.
-- [ ] `git rebase --fork-point origin/<target>`, with no interactive fallback.
-- [ ] If the rebase fails, run `git rebase --abort` with `reject: true`, and mark the MR `failed (conflict)`.
+- [x] `git checkout --detach origin/<src>`
+- [x] If a local `<src>` exists and has local-only commits, mark the MR `skipped (local-only commits)`, leave the branch alone, and move to the next MR.
+- [x] `git rebase --fork-point origin/<target>`, with no interactive fallback.
+- [x] If the rebase fails, run `git rebase --abort` with `reject: true`, and mark the MR `failed (conflict)`.
   - If the abort itself fails, stop the whole run. Mark the remaining MRs `not run`, print `git rebase --abort && git checkout <original>`, and exit 1.
-- [ ] Push with `git push --force-with-lease=refs/heads/<src>:<origin sha before rebase> origin HEAD:refs/heads/<src>`.
-- [ ] Update the local branch:
+- [x] Push with `git push --force-with-lease=refs/heads/<src>:<origin sha before rebase> origin HEAD:refs/heads/<src>`.
+- [x] Update the local branch:
   - If a local `<src>` exists and isn't checked out in any worktree (`git worktree list --porcelain`), run `git update-ref refs/heads/<src> <new> <old-local>`.
   - If it is checked out, print `git reset --keep origin/<src>` as a hint instead.
   - Never create local branches. Remove the use of `checkoutOrCreateTrackingBranch`.
-- [ ] After the loop, check out the original branch. If that fails, still print the summary, followed by the error and the recovery command.
+- [x] After the loop, check out the original branch. If that fails, still print the summary, followed by the error and the recovery command.
 
 ### 1b. Plain `sb` refuses to overwrite
 
 In `syncBranch.flow.ts`, after the fetch and before the rebase:
 
-- [ ] If `origin/<current>` exists and `git rev-list --count <current>..origin/<current>` is greater than 0, stop with `origin/<current> has N commit(s) you don't have locally. Run git pull --rebase first.` and exit 1.
-- [ ] Record the SHA of `origin/<current>` before the rebase. Push with `git push --force-with-lease=refs/heads/<current>:<sha> origin HEAD:refs/heads/<current>`.
+- [x] If `origin/<current>` exists and `git rev-list --count <current>..origin/<current>` is greater than 0, stop with `origin/<current> has N commit(s) you don't have locally. Run git pull --rebase first.` and exit 1.
+- [x] Record the SHA of `origin/<current>` before the rebase. Push with `git push --force-with-lease=refs/heads/<current>:<sha> origin HEAD:refs/heads/<current>`.
   - A branch that was never pushed uses `--force-with-lease=refs/heads/<current>:`.
-- [ ] Keep the interactive-rebase fallback unchanged.
+- [x] Keep the interactive-rebase fallback unchanged.
 
 ### 1c. Ctrl+C and prompt cancel
 
-- [ ] Add a cancellation registry in `src/infra/` where a flow registers an async cleanup. It owns an `AbortController`, and its signal is passed as `cancelSignal` to `execa` git calls.
-- [ ] Change the `cli.ts` SIGINT handler:
+- [x] Add a cancellation registry in `src/infra/` where a flow registers an async cleanup. It owns an `AbortController`, and its signal is passed as `cancelSignal` to `execa` git calls.
+- [x] Change the `cli.ts` SIGINT handler:
   - With no cleanup registered, exit immediately as today, so other commands are unchanged.
   - With one registered, the first Ctrl+C runs the cleanup, prints a partial summary with `interrupted` rows, and exits 130. A second Ctrl+C exits immediately.
-- [ ] `--mine` cleanup runs `git rebase --abort` if a rebase is in progress, then checks out the original branch. Git may already have died from the same SIGINT, because it shares the terminal's process group.
-- [ ] In `runSyncMineFlow`, catch `error.name === 'ExitPromptError'`, log `Sync aborted.`, and exit 0 with no `[ERROR]` line.
+- [x] `--mine` cleanup runs `git rebase --abort` if a rebase is in progress, then checks out the original branch. Git may already have died from the same SIGINT, because it shares the terminal's process group.
+- [x] In `runSyncMineFlow`, catch `error.name === 'ExitPromptError'`, log `Sync aborted.`, and exit 0 with no `[ERROR]` line.
 
 ### 1d. Tests
 
-- [ ] Add an integration test helper that builds real repos under a temp dir: a bare `origin`, a `user` clone, and an `other` clone that stands in for a second machine or person. Mock only `glab.service`.
-- [ ] `--mine`: `other` pushes to `<src>` while `user`'s copy is stale. The MR must be synced from `origin/<src>`, and `other`'s commit must still be on `origin/<src>`.
-- [ ] `--mine`: when `user` has local-only commits, the MR is skipped and nothing is pushed.
-- [ ] `--mine`: a conflict is aborted, the next MR still runs, and the original branch is restored.
-- [ ] `sb`: the same stale-copy scenario stops with the pull hint, and `origin/<current>` is unchanged.
-- [ ] `sb`: a branch that was never pushed, and a normal sync, both still work.
-- [ ] Cancelling the confirm prompt exits 0.
-- [ ] Update the existing mocked tests to match the new service functions.
+- [x] Add an integration test helper that builds real repos under a temp dir: a bare `origin`, a `user` clone, and an `other` clone that stands in for a second machine or person. Mock only `glab.service`.
+- [x] `--mine`: `other` pushes to `<src>` while `user`'s copy is stale. The MR must be synced from `origin/<src>`, and `other`'s commit must still be on `origin/<src>`.
+- [x] `--mine`: when `user` has local-only commits, the MR is skipped and nothing is pushed.
+- [x] `--mine`: a conflict is aborted, the next MR still runs, and the original branch is restored.
+- [x] `sb`: the same stale-copy scenario stops with the pull hint, and `origin/<current>` is unchanged.
+- [x] `sb`: a branch that was never pushed, and a normal sync, both still work.
+- [x] Cancelling the confirm prompt exits 0.
+- [x] Update the existing mocked tests to match the new service functions.
 
 **Done when:**
 
