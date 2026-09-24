@@ -43,9 +43,44 @@ describe('syncBranchCommand', () => {
   it('runs the mine flow when --mine is set without a target', async () => {
     await syncBranchCommand(undefined, { mine: true, yes: true });
 
-    expect(mockedRunSyncMineFlow).toHaveBeenCalledWith({ yes: true });
+    expect(mockedRunSyncMineFlow).toHaveBeenCalledWith({
+      yes: true,
+      concurrency: 4,
+      keepWorktrees: false,
+    });
     expect(mockedRunSyncBranchFlow).not.toHaveBeenCalled();
   });
+
+  it('passes --concurrency and --keep-worktrees to the mine flow', async () => {
+    await syncBranchCommand(undefined, { mine: true, concurrency: '2', keepWorktrees: true });
+
+    expect(mockedRunSyncMineFlow).toHaveBeenCalledWith({
+      yes: false,
+      concurrency: 2,
+      keepWorktrees: true,
+    });
+  });
+
+  it.each(['0', '-1', '1.5', 'four'])('rejects --concurrency %s', async (concurrency) => {
+    await syncBranchCommand(undefined, { mine: true, concurrency });
+
+    expect(logger.error).toHaveBeenCalledWith('--concurrency must be a positive integer.');
+    expect(process.exitCode).toBe(1);
+    expect(mockedRunSyncMineFlow).not.toHaveBeenCalled();
+  });
+
+  it.each([{ concurrency: '2' }, { keepWorktrees: true }])(
+    'rejects %o without --mine',
+    async (options) => {
+      await syncBranchCommand(undefined, options);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        '--concurrency and --keep-worktrees only work together with --mine.',
+      );
+      expect(process.exitCode).toBe(1);
+      expect(mockedRunSyncBranchFlow).not.toHaveBeenCalled();
+    },
+  );
 
   it('runs the single-branch flow when --mine is not set', async () => {
     await syncBranchCommand('develop', {});

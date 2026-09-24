@@ -66,12 +66,19 @@ program
   .command('sync-branch')
   .alias('sb')
   .argument('[target]', 'Remote target branch to rebase onto (auto-detected if omitted)')
-  .option('--mine', 'Sync all open MRs assigned to you (rebase each onto its target and push)')
+  .option(
+    '--mine',
+    'Sync all open MRs authored by or assigned to you (rebase each onto its target and push). ' +
+      'Git hooks are skipped.',
+  )
   .option('-y, --yes', 'Skip the confirmation prompt when using --mine')
+  .option('--concurrency <n>', 'With --mine, how many MRs to rebase at once (default: 4)')
+  .option('--keep-worktrees', 'With --mine, keep the fallback rebase worktrees for debugging')
   .description(
     'Rebase the current branch onto origin/<target> and push with --force-with-lease. ' +
       'When <target> is omitted, the base branch is auto-detected and offered as a default. ' +
-      'With --mine, syncs every open MR assigned to you instead.',
+      'With --mine, syncs every open MR authored by or assigned to you instead, ' +
+      'without touching your worktree and with git hooks skipped.',
   )
   .action(syncBranchCommand);
 

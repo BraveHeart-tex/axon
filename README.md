@@ -107,6 +107,22 @@ Create a new release branch:
 axon release
 ```
 
+#### Sync Branches
+
+Rebase the current branch onto its target and push with `--force-with-lease`:
+
+```bash
+axon sb [target]
+```
+
+Rebase and push every open MR you authored or are assigned to:
+
+```bash
+axon sb --mine [-y] [--concurrency <n>] [--keep-worktrees]
+```
+
+`--mine` never touches your worktree. It rebases in the background (up to `--concurrency` MRs at once, default 4), pushes stacked MRs together, and prints a summary. **Git hooks are skipped** for every git command it runs, including `pre-push`. `--keep-worktrees` keeps the fallback rebase worktrees under `.git/axon-sync/` for debugging.
+
 ## Development
 
 ### Scripts

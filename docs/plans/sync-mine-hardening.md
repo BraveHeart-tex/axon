@@ -184,13 +184,13 @@ Every MR that doesn't get synced still appears in the summary, with a reason.
 
 ### 3a. Startup
 
-- [ ] Remove the dirty-tree check and the original-branch restore from `--mine`.
-- [ ] Check the git version. At 2.44 or later, use `replay`; below that, use worktrees only.
-- [ ] Take the lock: open `<gcd>/axon-sync.lock` exclusively (`wx`) and write the PID into it.
+- [x] Remove the dirty-tree check and the original-branch restore from `--mine`.
+- [x] Check the git version. At 2.44 or later, use `replay`; below that, use worktrees only.
+- [x] Take the lock: open `<gcd>/axon-sync.lock` exclusively (`wx`) and write the PID into it.
   - If the file already exists and its PID isn't running (`process.kill(pid, 0)` throws), delete it and try again.
   - If that PID is running, exit 1 with `another sync is running (pid N)`.
   - Release the lock in the `finally` and in the Ctrl+C cleanup.
-- [ ] Clean up leftovers from a crashed run:
+- [x] Clean up leftovers from a crashed run:
   - For each worktree under `<gcd>/axon-sync/`, run `git -C <wt> rebase --abort` (errors ignored), then `git worktree remove --force <wt>`.
   - Delete the `axon-sync/*` branches.
   - Run `git worktree prune`.
@@ -198,25 +198,25 @@ Every MR that doesn't get synced still appears in the summary, with a reason.
 
 ### 3b. Stacks
 
-- [ ] Build a dependency graph with an edge from parent to child when a child's `<target>` equals another listed MR's `<src>`.
-- [ ] A parent that isn't in the list is treated as a normal target.
-- [ ] Mark MRs in a cycle `failed (cycle)`.
+- [x] Build a dependency graph with an edge from parent to child when a child's `<target>` equals another listed MR's `<src>`.
+- [x] A parent that isn't in the list is treated as a normal target.
+- [x] Mark MRs in a cycle `failed (cycle)`.
 
 ### 3c. Rebasing, up to `--concurrency` (default 4) at once
 
 Run every git command as `git -c core.hooksPath=/dev/null ...`.
 
-- [ ] Work out the base:
+- [x] Work out the base:
   - For a child, the base is its parent's new local SHA, or `origin/<parent>` if the parent was `up-to-date`.
   - If the parent failed, mark the child `skipped (parent failed)`.
   - For any other MR, the base is `origin/<target>`.
   - Use the same base for the up-to-date check.
-- [ ] Rebase each MR:
+- [x] Rebase each MR:
   1. `git branch axon-sync/<iid> origin/<src>`
   2. `git replay --onto <base> <fork-point>..axon-sync/<iid>`, and parse the new SHA.
   3. If replay fails, fall back to a worktree:
      - `git worktree add --detach <gcd>/axon-sync/<iid> origin/<src>`
-     - `git -C <wt> rebase --fork-point <base>`
+     - `git -C <wt> rebase --onto <base> <fork-point>` (the base can be a parent's new SHA, which `--fork-point` can't use)
      - On success, the new SHA is `git -C <wt> rev-parse HEAD`.
      - On failure, run `rebase --abort` and mark the MR `failed (conflict)`.
      - Remove the worktree unless `--keep-worktrees` is set.
@@ -226,34 +226,34 @@ Run every git command as `git -c core.hooksPath=/dev/null ...`.
 
 Every push uses `--porcelain --no-verify` and one lease per ref.
 
-- [ ] Put independent MRs into one non-atomic push.
-- [ ] Push each stack in its own `--atomic` push, with the parent and every descendant that rebased successfully. A parent can go without a failed child; a child never goes without its parent.
-- [ ] Map the result lines:
+- [x] Put independent MRs into one non-atomic push.
+- [x] Push each stack in its own `--atomic` push, with the parent and every descendant that rebased successfully. A parent can go without a failed child; a child never goes without its parent.
+- [x] Map the result lines:
   - `+` or `=`: `synced`
   - `(stale info)`: `failed (remote changed)`
   - `(atomic push failed)`: `skipped (stack rejected)`
-- [ ] Retry: if a push fails with no per-ref lines and its stderr matches a network error (`Could not resolve host`, `Connection timed out`, `Connection reset`, `unable to access`, `early EOF`, `RPC failed`), wait about 2s and run it once more.
-- [ ] Update local branches the same way as in Phase 1a.
+- [x] Retry: if a push fails with no per-ref lines and its stderr matches a network error (`Could not resolve host`, `Connection timed out`, `Connection reset`, `unable to access`, `early EOF`, `RPC failed`), wait about 2s and run it once more.
+- [x] Update local branches the same way as in Phase 1a.
 
 ### 3e. Ctrl+C
 
-- [ ] Cancel queued work, abort in-flight git calls, and remove worktrees and `axon-sync/*` branches. Then release the lock, print the summary, and exit 130.
-- [ ] If Ctrl+C lands during the push, mark those MRs `interrupted - rerun to verify`. A rerun is safe because synced MRs come back `up-to-date`.
+- [x] Cancel queued work, abort in-flight git calls, and remove worktrees and `axon-sync/*` branches. Then release the lock, print the summary, and exit 130.
+- [x] If Ctrl+C lands during the push, mark those MRs `interrupted - rerun to verify`. A rerun is safe because synced MRs come back `up-to-date`.
 
 ### 3f. CLI and docs
 
-- [ ] Add `--concurrency <n>` (a positive integer) and `--keep-worktrees`. Both are valid only with `--mine`, in the same way `syncBranch.ts` rejects a target combined with `--mine`.
-- [ ] State in `--help` and `README.md` that hooks are skipped during `--mine`.
+- [x] Add `--concurrency <n>` (a positive integer) and `--keep-worktrees`. Both are valid only with `--mine`, in the same way `syncBranch.ts` rejects a target combined with `--mine`.
+- [x] State in `--help` and `README.md` that hooks are skipped during `--mine`.
 
 ### 3g. Tests
 
-- [ ] Your worktree's HEAD, index and `git status` are identical before and after a run.
-- [ ] A two-level stack syncs parent then child. When the parent conflicts, the child is `skipped (parent failed)`.
-- [ ] When replay hits a conflict, the worktree fallback runs.
-- [ ] A running lock blocks a second run, and a lock left by a dead PID is cleared.
-- [ ] Leftover worktrees and `axon-sync/*` branches from a crashed run are cleaned up at startup.
-- [ ] A stale lease inside a stack rejects the whole stack.
-- [ ] After Ctrl+C, no `axon-sync` worktree, branch or lock is left behind.
+- [x] Your worktree's HEAD, index and `git status` are identical before and after a run.
+- [x] A two-level stack syncs parent then child. When the parent conflicts, the child is `skipped (parent failed)`.
+- [x] When replay hits a conflict, the worktree fallback runs.
+- [x] A running lock blocks a second run, and a lock left by a dead PID is cleared.
+- [x] Leftover worktrees and `axon-sync/*` branches from a crashed run are cleaned up at startup.
+- [x] A stale lease inside a stack rejects the whole stack.
+- [x] After Ctrl+C, no `axon-sync` worktree, branch or lock is left behind.
 
 **Done when:**
 
