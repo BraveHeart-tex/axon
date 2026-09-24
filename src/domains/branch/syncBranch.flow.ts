@@ -16,6 +16,7 @@ import {
 import { logger } from '@/infra/logger.js';
 
 import { resolveSyncTarget } from './resolveSyncTarget.flow.js';
+import { findSyncGuardrail } from './syncGuardrail.js';
 
 export const runSyncBranchFlow = async (target?: string) => {
   try {
@@ -65,10 +66,9 @@ const syncBranch = async (target?: string) => {
     return;
   }
 
-  const isReleaseBranch = currentBranch.startsWith('release/');
-  const isMainOrMaster = targetBranch === 'main' || targetBranch === 'master';
+  const guardrail = findSyncGuardrail(currentBranch, targetBranch);
 
-  if (isReleaseBranch && !isMainOrMaster) {
+  if (guardrail === 'release-branch-off-main') {
     logger.warn(
       `${c.bold(currentBranch)} is a release branch. Syncing it onto ${c.bold(
         `origin/${targetBranch}`,
@@ -86,7 +86,7 @@ const syncBranch = async (target?: string) => {
     }
   }
 
-  if (!isReleaseBranch && isMainOrMaster) {
+  if (guardrail === 'feature-branch-onto-main') {
     logger.warn(
       `${c.bold(currentBranch)} is a feature branch. Rebasing it onto ${c.bold(
         `origin/${targetBranch}`,

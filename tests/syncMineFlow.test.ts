@@ -1,4 +1,5 @@
 import { confirm } from '@inquirer/prompts';
+import ora from 'ora';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { runSyncMineFlow } from '@/domains/branch/syncMine.flow.js';
@@ -7,17 +8,23 @@ import {
   checkoutBranch,
   checkoutDetached,
   countLocalOnlyCommits,
-  fetchOriginPrune,
+  fetchOriginBranches,
   getCheckedOutBranches,
   getCurrentBranchNameForWorktree,
+  isAncestor,
   isRebaseInProgress,
   isWorkingTreeDirty,
+  listRemoteBranches,
   pushHeadWithLease,
   rebaseOntoRemoteBranch,
   resolveCommitSha,
   updateLocalBranchRef,
 } from '@/domains/git/git.service.js';
-import { checkGlabAuth, listMyOpenMergeRequests } from '@/domains/mr/glab.service.js';
+import {
+  checkGlabAuth,
+  listMyOpenMergeRequests,
+  MyMergeRequest,
+} from '@/domains/mr/glab.service.js';
 import { createInterruptHandler } from '@/infra/cancellation.js';
 import { logger } from '@/infra/logger.js';
 
@@ -30,11 +37,13 @@ vi.mock('@/domains/git/git.service.js', () => ({
   checkoutBranch: vi.fn(),
   checkoutDetached: vi.fn(),
   countLocalOnlyCommits: vi.fn(),
-  fetchOriginPrune: vi.fn(),
+  fetchOriginBranches: vi.fn(),
   getCheckedOutBranches: vi.fn(),
   getCurrentBranchNameForWorktree: vi.fn(),
+  isAncestor: vi.fn(),
   isRebaseInProgress: vi.fn(),
   isWorkingTreeDirty: vi.fn(),
+  listRemoteBranches: vi.fn(),
   pushHeadWithLease: vi.fn(),
   rebaseOntoRemoteBranch: vi.fn(),
   resolveCommitSha: vi.fn(),
@@ -44,6 +53,20 @@ vi.mock('@/domains/git/git.service.js', () => ({
 vi.mock('@/domains/mr/glab.service.js', () => ({
   checkGlabAuth: vi.fn(),
   listMyOpenMergeRequests: vi.fn(),
+}));
+
+const spinner = {
+  fail: vi.fn(),
+  info: vi.fn(),
+  start: vi.fn(),
+  stop: vi.fn(),
+  succeed: vi.fn(),
+  warn: vi.fn(),
+};
+spinner.start.mockReturnValue(spinner);
+
+vi.mock('ora', () => ({
+  default: vi.fn(() => spinner),
 }));
 
 vi.mock('@/infra/logger.js', () => ({
@@ -60,11 +83,13 @@ const mockedAbortRebaseStrict = vi.mocked(abortRebaseStrict);
 const mockedCheckoutBranch = vi.mocked(checkoutBranch);
 const mockedCheckoutDetached = vi.mocked(checkoutDetached);
 const mockedCountLocalOnlyCommits = vi.mocked(countLocalOnlyCommits);
-const mockedFetchOriginPrune = vi.mocked(fetchOriginPrune);
+const mockedFetchOriginBranches = vi.mocked(fetchOriginBranches);
 const mockedGetCheckedOutBranches = vi.mocked(getCheckedOutBranches);
 const mockedGetCurrentBranchNameForWorktree = vi.mocked(getCurrentBranchNameForWorktree);
+const mockedIsAncestor = vi.mocked(isAncestor);
 const mockedIsRebaseInProgress = vi.mocked(isRebaseInProgress);
 const mockedIsWorkingTreeDirty = vi.mocked(isWorkingTreeDirty);
+const mockedListRemoteBranches = vi.mocked(listRemoteBranches);
 const mockedPushHeadWithLease = vi.mocked(pushHeadWithLease);
 const mockedRebaseOntoRemoteBranch = vi.mocked(rebaseOntoRemoteBranch);
 const mockedResolveCommitSha = vi.mocked(resolveCommitSha);
@@ -72,8 +97,20 @@ const mockedUpdateLocalBranchRef = vi.mocked(updateLocalBranchRef);
 const mockedCheckGlabAuth = vi.mocked(checkGlabAuth);
 const mockedListMyOpenMergeRequests = vi.mocked(listMyOpenMergeRequests);
 
-const mrOne = { iid: '1', sourceBranch: 'feat/one', targetBranch: 'develop' };
-const mrTwo = { iid: '2', sourceBranch: 'feat/two', targetBranch: 'develop' };
+const mr = (iid: string, sourceBranch: string, overrides: Partial<MyMergeRequest> = {}) => ({
+  iid,
+  sourceBranch,
+  targetBranch: 'develop',
+  sourceProjectId: 7,
+  targetProjectId: 7,
+  draft: false,
+  ...overrides,
+});
+
+const mrOne = mr('1', 'feat/one');
+const mrTwo = mr('2', 'feat/two');
+
+const gitOptions = { cancelSignal: expect.any(AbortSignal), captureOutput: true };
 
 const shas: Record<string, string> = {
   'refs/remotes/origin/feat/one': 'origin-one',
@@ -91,7 +128,9 @@ describe('runSyncMineFlow', () => {
     mockedIsWorkingTreeDirty.mockResolvedValue(false);
     mockedGetCurrentBranchNameForWorktree.mockResolvedValue('feat/current');
     mockedListMyOpenMergeRequests.mockResolvedValue([]);
-    mockedFetchOriginPrune.mockResolvedValue(undefined);
+    mockedListRemoteBranches.mockImplementation(async (branches) => new Set(branches));
+    mockedFetchOriginBranches.mockResolvedValue(undefined);
+    mockedIsAncestor.mockResolvedValue(false);
     mockedCheckoutDetached.mockResolvedValue(undefined);
     mockedCheckoutBranch.mockResolvedValue(undefined);
     mockedResolveCommitSha.mockImplementation(async (ref) => shas[ref] ?? '');
@@ -131,9 +170,9 @@ describe('runSyncMineFlow', () => {
 
     await runSyncMineFlow({ yes: false });
 
-    expect(logger.info).toHaveBeenCalledWith('No open MRs assigned to you.');
+    expect(logger.info).toHaveBeenCalledWith('No open MRs authored by or assigned to you.');
     expect(mockedConfirm).not.toHaveBeenCalled();
-    expect(mockedFetchOriginPrune).not.toHaveBeenCalled();
+    expect(mockedFetchOriginBranches).not.toHaveBeenCalled();
   });
 
   it('aborts sync when confirm is declined', async () => {
@@ -143,7 +182,7 @@ describe('runSyncMineFlow', () => {
     await runSyncMineFlow({ yes: false });
 
     expect(logger.info).toHaveBeenCalledWith('Sync aborted.');
-    expect(mockedFetchOriginPrune).not.toHaveBeenCalled();
+    expect(mockedFetchOriginBranches).not.toHaveBeenCalled();
     expect(mockedCheckoutDetached).not.toHaveBeenCalled();
   });
 
@@ -160,7 +199,7 @@ describe('runSyncMineFlow', () => {
     expect(logger.info).toHaveBeenCalledWith('Sync aborted.');
     expect(logger.error).not.toHaveBeenCalled();
     expect(process.exitCode).toBeUndefined();
-    expect(mockedFetchOriginPrune).not.toHaveBeenCalled();
+    expect(mockedFetchOriginBranches).not.toHaveBeenCalled();
   });
 
   it('skips the confirm prompt when yes is true', async () => {
@@ -169,10 +208,8 @@ describe('runSyncMineFlow', () => {
     await runSyncMineFlow({ yes: true });
 
     expect(mockedConfirm).not.toHaveBeenCalled();
-    expect(mockedFetchOriginPrune).toHaveBeenCalled();
-    expect(mockedCheckoutDetached).toHaveBeenCalledWith('origin/feat/one', {
-      cancelSignal: expect.any(AbortSignal),
-    });
+    expect(mockedFetchOriginBranches).toHaveBeenCalled();
+    expect(mockedCheckoutDetached).toHaveBeenCalledWith('origin/feat/one', gitOptions);
   });
 
   it('rebases origin/<src>, pushes with an explicit lease and updates the local branch', async () => {
@@ -181,12 +218,8 @@ describe('runSyncMineFlow', () => {
     await runSyncMineFlow({ yes: true });
 
     expect(mockedCountLocalOnlyCommits).toHaveBeenCalledWith('origin-one', 'local-one');
-    expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledWith('develop', {
-      cancelSignal: expect.any(AbortSignal),
-    });
-    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/one', 'origin-one', {
-      cancelSignal: expect.any(AbortSignal),
-    });
+    expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledWith('develop', gitOptions);
+    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/one', 'origin-one', gitOptions);
     expect(mockedUpdateLocalBranchRef).toHaveBeenCalledWith('feat/one', 'rebased', 'local-one');
     expect(mockedCheckoutBranch).toHaveBeenCalledWith('feat/current');
     expect(logger.success).toHaveBeenCalledWith(expect.stringContaining('!1: feat/one'));
@@ -199,9 +232,7 @@ describe('runSyncMineFlow', () => {
     await runSyncMineFlow({ yes: true });
 
     expect(mockedCountLocalOnlyCommits).not.toHaveBeenCalled();
-    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/two', 'origin-two', {
-      cancelSignal: expect.any(AbortSignal),
-    });
+    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/two', 'origin-two', gitOptions);
     expect(mockedUpdateLocalBranchRef).not.toHaveBeenCalled();
   });
 
@@ -225,9 +256,7 @@ describe('runSyncMineFlow', () => {
 
     expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledTimes(1);
     expect(mockedPushHeadWithLease).toHaveBeenCalledTimes(1);
-    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/two', 'origin-two', {
-      cancelSignal: expect.any(AbortSignal),
-    });
+    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/two', 'origin-two', gitOptions);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('!1: feat/one -> develop — skipped (local-only commits)'),
     );
@@ -266,7 +295,7 @@ describe('runSyncMineFlow', () => {
     mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne, mrTwo]);
     const interrupt = createInterruptHandler({ exit: vi.fn(), stdout: vi.fn(), stderr: vi.fn() });
     let cleanup: Promise<void> | undefined;
-    mockedFetchOriginPrune.mockImplementationOnce(async () => {
+    mockedFetchOriginBranches.mockImplementationOnce(async () => {
       cleanup = interrupt();
       throw new Error('fetch killed');
     });
@@ -283,6 +312,7 @@ describe('runSyncMineFlow', () => {
       expect.stringContaining('!2: feat/two -> develop — not run (interrupted)'),
     );
     expect(logger.error).not.toHaveBeenCalledWith('fetch killed');
+    expect(process.exitCode).toBe(130);
   });
 
   it('aborts a conflicting rebase, continues with the next MR and restores the original branch', async () => {
@@ -293,9 +323,7 @@ describe('runSyncMineFlow', () => {
 
     expect(mockedAbortRebaseStrict).toHaveBeenCalledTimes(1);
     expect(mockedPushHeadWithLease).toHaveBeenCalledTimes(1);
-    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/two', 'origin-two', {
-      cancelSignal: expect.any(AbortSignal),
-    });
+    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/two', 'origin-two', gitOptions);
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('!1: feat/one -> develop — failed (conflict)'),
     );
@@ -351,13 +379,18 @@ describe('runSyncMineFlow', () => {
 
   it('records a rejected push as failed', async () => {
     mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
-    mockedPushHeadWithLease.mockRejectedValueOnce(new Error('stale info'));
+    mockedPushHeadWithLease.mockRejectedValueOnce(
+      new Error('Command failed with exit code 1: git push\n\n ! [rejected] (stale info)'),
+    );
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await runSyncMineFlow({ yes: true });
 
     expect(mockedUpdateLocalBranchRef).not.toHaveBeenCalled();
-    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('failed (stale info)'));
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('failed (push failed)'));
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('(stale info)'));
     expect(process.exitCode).toBe(1);
+    stderr.mockRestore();
   });
 
   it('still prints the summary and a recovery command when restoring the branch fails', async () => {
@@ -370,5 +403,242 @@ describe('runSyncMineFlow', () => {
     expect(logger.error).toHaveBeenCalledWith('Failed to checkout branch feat/current');
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('git checkout feat/current'));
     expect(process.exitCode).toBe(1);
+  });
+
+  const summaryLines = () =>
+    [logger.success, logger.warn, logger.error]
+      .flatMap((log) => vi.mocked(log).mock.calls)
+      .map(([line]) => line)
+      .filter((line) => line.startsWith('  !'));
+
+  it.each([
+    ['fork', mr('1', 'feat/fork', { sourceProjectId: 99 })],
+    ['draft', mr('1', 'feat/draft', { draft: true })],
+    ['guardrail', mr('1', 'release/1.2')],
+    ['guardrail', mr('1', 'feat/hotfix', { targetBranch: 'main' })],
+  ])('reports a %s MR as skipped without touching git', async (reason, skipped) => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([skipped]);
+
+    await runSyncMineFlow({ yes: false });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `!1: ${skipped.sourceBranch} -> ${skipped.targetBranch} — skipped (${reason})`,
+      ),
+    );
+    expect(mockedConfirm).not.toHaveBeenCalled();
+    expect(mockedListRemoteBranches).not.toHaveBeenCalled();
+    expect(mockedCheckoutDetached).not.toHaveBeenCalled();
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it('prints the axon sb command for a guardrail-skipped MR', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mr('1', 'release/1.2')]);
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('git checkout release/1.2 && axon sb develop'),
+      false,
+    );
+  });
+
+  it('fetches only the unique source and target branches that exist on origin', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([
+      mrOne,
+      mrTwo,
+      mr('3', 'feat/gone'),
+      mr('4', 'feat/draft', { draft: true }),
+    ]);
+    mockedListRemoteBranches.mockResolvedValueOnce(new Set(['feat/one', 'feat/two', 'develop']));
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(mockedListRemoteBranches).toHaveBeenCalledWith(
+      ['feat/one', 'develop', 'feat/two', 'feat/gone'],
+      { cancelSignal: expect.any(AbortSignal) },
+    );
+    expect(mockedFetchOriginBranches).toHaveBeenCalledWith(['feat/one', 'develop', 'feat/two'], {
+      cancelSignal: expect.any(AbortSignal),
+    });
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('!3: feat/gone -> develop — failed (origin/feat/gone not found)'),
+    );
+    expect(mockedCheckoutDetached).toHaveBeenCalledTimes(2);
+    expect(mockedPushHeadWithLease).toHaveBeenCalledTimes(2);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('fails an MR whose target is missing on origin and continues', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([
+      mr('1', 'feat/one', { targetBranch: 'gone' }),
+      mrTwo,
+    ]);
+    mockedListRemoteBranches.mockResolvedValueOnce(new Set(['feat/one', 'feat/two', 'develop']));
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('!1: feat/one -> gone — failed (origin/gone not found)'),
+    );
+    expect(mockedPushHeadWithLease).toHaveBeenCalledExactlyOnceWith(
+      'feat/two',
+      'origin-two',
+      gitOptions,
+    );
+  });
+
+  it('never checks out, rebases or pushes an up-to-date MR', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
+    mockedIsAncestor.mockResolvedValueOnce(true);
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(mockedIsAncestor).toHaveBeenCalledWith(
+      'refs/remotes/origin/develop',
+      'refs/remotes/origin/feat/one',
+      gitOptions,
+    );
+    expect(mockedCheckoutDetached).not.toHaveBeenCalled();
+    expect(mockedRebaseOntoRemoteBranch).not.toHaveBeenCalled();
+    expect(mockedPushHeadWithLease).not.toHaveBeenCalled();
+    expect(logger.success).toHaveBeenCalledWith(
+      expect.stringContaining('!1: feat/one -> develop — up-to-date'),
+    );
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it('prints the axon sb command for a conflict', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
+    mockedRebaseOntoRemoteBranch.mockRejectedValueOnce(new Error('conflict'));
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('git checkout feat/one && axon sb develop'),
+      false,
+    );
+  });
+
+  it('shows progress as [i/N] for every MR it syncs', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne, mrTwo]);
+    mockedIsAncestor.mockResolvedValueOnce(true);
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(ora).toHaveBeenCalledWith(
+      expect.objectContaining({ text: '[1/2] !1 feat/one -> develop' }),
+    );
+    expect(ora).toHaveBeenCalledWith(
+      expect.objectContaining({ text: '[2/2] !2 feat/two -> develop' }),
+    );
+    expect(spinner.info).toHaveBeenCalledWith('[1/2] !1 feat/one -> develop — up-to-date');
+    expect(spinner.succeed).toHaveBeenCalledWith('[2/2] !2 feat/two -> develop — synced');
+  });
+
+  it('groups the summary by status and lists every MR exactly once', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([
+      mr('1', 'feat/conflict'),
+      mr('2', 'feat/draft', { draft: true }),
+      mr('3', 'feat/current-already'),
+      mr('4', 'feat/synced'),
+    ]);
+    mockedIsAncestor.mockImplementation(async (_target, source) =>
+      source.endsWith('feat/current-already'),
+    );
+    mockedRebaseOntoRemoteBranch.mockRejectedValueOnce(new Error('conflict'));
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(summaryLines().map((line) => line.split(' — ')[1])).toEqual([
+      'synced',
+      'up-to-date',
+      'skipped (draft)',
+      'failed (conflict)',
+    ]);
+    expect(summaryLines().map((line) => line.split(':')[0]?.trim())).toEqual([
+      '!4',
+      '!3',
+      '!2',
+      '!1',
+    ]);
+  });
+
+  it('exits 1 and reports every MR not run when the fetch fails', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([
+      mrOne,
+      mr('2', 'feat/draft', { draft: true }),
+    ]);
+    mockedFetchOriginBranches.mockRejectedValueOnce(new Error('Failed to fetch from origin: boom'));
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(mockedCheckoutDetached).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('!1: feat/one -> develop — not run (fetch failed)'),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('!2: feat/draft -> develop — skipped (draft)'),
+    );
+    expect(logger.error).toHaveBeenCalledWith('Failed to fetch from origin: boom');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('tells the user to set up credentials when the push needs a prompt', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
+    mockedPushHeadWithLease.mockRejectedValueOnce(
+      new Error(
+        "Command failed with exit code 128: git push\n\nfatal: could not read Username for 'https://gitlab.com': terminal prompts disabled",
+      ),
+    );
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Set up a credential helper or SSH agent'),
+      false,
+    );
+    expect(process.exitCode).toBe(1);
+    stderr.mockRestore();
+  });
+
+  it('tells the user to set up credentials when the fetch needs a prompt', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
+    mockedListRemoteBranches.mockRejectedValueOnce(
+      new Error('Failed to list branches on origin: terminal prompts disabled'),
+    );
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Set up a credential helper or SSH agent'),
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('exits 130 when Ctrl+C interrupts an MR mid-run', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne, mrTwo]);
+    const exit = vi.fn();
+    const interrupt = createInterruptHandler({ exit, stdout: vi.fn(), stderr: vi.fn() });
+    let cleanup: Promise<void> | undefined;
+    mockedRebaseOntoRemoteBranch.mockImplementationOnce(async () => {
+      cleanup = interrupt();
+      throw new Error('rebase killed');
+    });
+    mockedIsRebaseInProgress.mockResolvedValue(false);
+
+    await runSyncMineFlow({ yes: true });
+    await cleanup;
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('!1: feat/one -> develop — interrupted (Ctrl+C)'),
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('!2: feat/two -> develop — not run (interrupted)'),
+    );
+    expect(spinner.stop).toHaveBeenCalled();
+    expect(process.exitCode).toBe(130);
+    expect(exit).toHaveBeenCalledExactlyOnceWith(130);
   });
 });

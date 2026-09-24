@@ -136,36 +136,39 @@ In `syncBranch.flow.ts`, after the fetch and before the rebase:
 
 ### 2a. Listing MRs (`glab.service.ts`)
 
-- [ ] Run `--assignee=@me` and `--author=<me>` in parallel, each with `--per-page 100`, looping through pages until one comes back short. Deduplicate by `iid`.
+- [x] Run `--assignee=@me` and `--author=<me>` in parallel, each with `--per-page 100`, looping through pages until one comes back short. Deduplicate by `iid`.
   - First check whether `--author=@me` works in the installed glab. If it doesn't, get `<me>` from the `username` field of `glab api user`.
-- [ ] Add `sourceProjectId`, `targetProjectId` and `draft` to `MyMergeRequest`. Stop filtering drafts here; the flow filters them so it can report them.
-- [ ] If `glab mr list` fails, say that a GitLab remote and `glab auth login` are needed, and include glab's stderr.
+  - Checked: `--author=@me` works in glab 1.116, so no `glab api user` fallback is needed.
+- [x] Add `sourceProjectId`, `targetProjectId` and `draft` to `MyMergeRequest`. Stop filtering drafts here; the flow filters them so it can report them.
+- [x] If `glab mr list` fails, say that a GitLab remote and `glab auth login` are needed, and include glab's stderr.
 
 ### 2b. Filtering and skipping (in the flow)
 
 Every MR that doesn't get synced still appears in the summary, with a reason.
 
-- [ ] `skipped (fork)` when `sourceProjectId !== targetProjectId`
-- [ ] `skipped (draft)`
-- [ ] `skipped (guardrail)`: move the two release rules from `syncBranch.flow.ts` into a shared pure function, and use it in both flows.
-- [ ] Fetch only what's needed: `git fetch origin <every unique src and target>`, without `--prune`. Plain `sb` keeps `fetchOriginPrune`.
-- [ ] `failed (origin/<x> not found)` when `<src>` or `<target>` is missing after the fetch. The run continues.
-- [ ] `up-to-date` when `git merge-base --is-ancestor origin/<target> origin/<src>` is true. Check this before any checkout.
-- [ ] A conflict gets the hint `git checkout <src> && axon sb <target>`.
+- [x] `skipped (fork)` when `sourceProjectId !== targetProjectId`
+- [x] `skipped (draft)`
+- [x] `skipped (guardrail)`: move the two release rules from `syncBranch.flow.ts` into a shared pure function, and use it in both flows.
+- [x] Fetch only what's needed: `git fetch origin <every unique src and target>`, without `--prune`. Plain `sb` keeps `fetchOriginPrune`.
+  - `git ls-remote --heads origin <refs>` runs first, and only the branches that exist are fetched. One missing ref would fail the whole fetch.
+- [x] `failed (origin/<x> not found)` when `<src>` or `<target>` is missing after the fetch. The run continues.
+- [x] `up-to-date` when `git merge-base --is-ancestor origin/<target> origin/<src>` is true. Check this before any checkout.
+- [x] A conflict gets the hint `git checkout <src> && axon sb <target>`.
 
 ### 2c. Output
 
-- [ ] An `ora` spinner with the text `[i/N] !<iid> <src> -> <target>`.
-- [ ] Capture git output instead of inheriting it. Show the captured stderr only for failures.
-- [ ] The summary groups MRs in this order: `synced`, `up-to-date`, `skipped`, `failed`, `interrupted`, `not run`. Every row that isn't a success has a reason.
-- [ ] Exit codes: 0 if nothing failed, 1 if anything failed or didn't run, 130 if interrupted.
+- [x] An `ora` spinner with the text `[i/N] !<iid> <src> -> <target>`.
+- [x] Capture git output instead of inheriting it. Show the captured stderr only for failures.
+  - Captured git runs with `GIT_TERMINAL_PROMPT=0`, so a missing credential fails with a hint instead of a hidden prompt under the spinner.
+- [x] The summary groups MRs in this order: `synced`, `up-to-date`, `skipped`, `failed`, `interrupted`, `not run`. Every row that isn't a success has a reason.
+- [x] Exit codes: 0 if nothing failed, 1 if anything failed or didn't run, 130 if interrupted.
 
 ### 2d. Tests
 
-- [ ] Listing: pagination beyond 100 results, author and assignee deduplicated, and the `glab api user` fallback.
-- [ ] Filtering: fork, draft and guardrail MRs each show up as `skipped` with their reason.
-- [ ] An `up-to-date` MR never triggers a checkout, rebase or push.
-- [ ] Summary grouping, and each exit code.
+- [x] Listing: pagination beyond 100 results, author and assignee deduplicated. (No `glab api user` fallback, since `--author=@me` works.)
+- [x] Filtering: fork, draft and guardrail MRs each show up as `skipped` with their reason.
+- [x] An `up-to-date` MR never triggers a checkout, rebase or push.
+- [x] Summary grouping, and each exit code.
 
 **Done when:**
 

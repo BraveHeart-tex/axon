@@ -6,7 +6,13 @@ import { JIRA_REGEX } from '../jira/jira.constants.js';
 import { formatCommits } from './git.formatter.js';
 import { RecentCommit } from './git.types.js';
 
-type GitCallOptions = { cancelSignal?: AbortSignal };
+type GitCallOptions = { cancelSignal?: AbortSignal; captureOutput?: boolean };
+
+// Captured git can't show a credential prompt, and a spinner would draw over it: fail instead.
+const noPromptEnv = { GIT_TERMINAL_PROMPT: '0' };
+
+const outputOptions = (captureOutput?: boolean) =>
+  captureOutput ? { stdio: 'pipe' as const, env: noPromptEnv } : { stdio: 'inherit' as const };
 
 export const checkoutBranch = async (branch: string) => {
   try {
@@ -185,6 +191,66 @@ export const fetchOriginPrune = async ({ cancelSignal }: GitCallOptions = {}) =>
   await execa('git', ['fetch', 'origin', '--prune'], { stdio: 'inherit', cancelSignal });
 };
 
+export const listRemoteBranches = async (
+  branches: string[],
+  { cancelSignal }: GitCallOptions = {},
+): Promise<Set<string>> => {
+  const prefix = 'refs/heads/';
+
+  try {
+    const { stdout } = await execa(
+      'git',
+      ['ls-remote', '--heads', 'origin', ...branches.map((branch) => `${prefix}${branch}`)],
+      { cancelSignal, env: noPromptEnv },
+    );
+
+    return new Set(
+      stdout
+        .split('\n')
+        .map((line) => line.split('\t')[1] ?? '')
+        .filter((ref) => ref.startsWith(prefix))
+        .map((ref) => ref.slice(prefix.length)),
+    );
+  } catch (error) {
+    throw new Error(`Failed to list branches on origin: ${(error as Error).message}`);
+  }
+};
+
+export const fetchOriginBranches = async (
+  branches: string[],
+  { cancelSignal }: GitCallOptions = {},
+) => {
+  try {
+    await execa(
+      'git',
+      [
+        'fetch',
+        'origin',
+        ...branches.map((branch) => `+refs/heads/${branch}:refs/remotes/origin/${branch}`),
+      ],
+      { cancelSignal, env: noPromptEnv },
+    );
+  } catch (error) {
+    throw new Error(`Failed to fetch from origin: ${(error as Error).message}`);
+  }
+};
+
+export const isAncestor = async (
+  ancestor: string,
+  descendant: string,
+  { cancelSignal }: GitCallOptions = {},
+) => {
+  const result = await execa('git', ['merge-base', '--is-ancestor', ancestor, descendant], {
+    reject: false,
+    cancelSignal,
+  });
+
+  if (result.exitCode === 0) return true;
+  if (result.exitCode === 1) return false;
+
+  throw new Error(`Failed to compare ${ancestor} with ${descendant}: ${result.stderr}`);
+};
+
 export const isWorkingTreeDirty = async () => {
   const [unstagedChanges, stagedChanges] = await Promise.all([
     execa('git', ['diff', '--quiet'], { reject: false }),
@@ -200,10 +266,10 @@ export const isWorkingTreeDirty = async () => {
 // rebase defaults to --no-fork-point and fails where `git pull --rebase` succeeds.
 export const rebaseOntoRemoteBranch = async (
   branchName: string,
-  { cancelSignal }: GitCallOptions = {},
+  { cancelSignal, captureOutput }: GitCallOptions = {},
 ) => {
   await execa('git', ['rebase', '--fork-point', `origin/${branchName}`], {
-    stdio: 'inherit',
+    ...outputOptions(captureOutput),
     cancelSignal,
   });
 };
@@ -220,7 +286,7 @@ export const abortRebase = async () => {
 
 export const abortRebaseStrict = async () => {
   try {
-    await execa('git', ['rebase', '--abort'], { stdio: 'inherit' });
+    await execa('git', ['rebase', '--abort']);
   } catch (error) {
     throw new Error(`Failed to abort rebase: ${(error as Error).message}`);
   }
@@ -345,7 +411,7 @@ export const pushCurrentBranch = async (): Promise<void> => {
 export const pushHeadWithLease = async (
   branch: string,
   expectedSha: string,
-  { cancelSignal }: GitCallOptions = {},
+  { cancelSignal, captureOutput }: GitCallOptions = {},
 ): Promise<void> => {
   await execa(
     'git',
@@ -355,6 +421,6 @@ export const pushHeadWithLease = async (
       'origin',
       `HEAD:refs/heads/${branch}`,
     ],
-    { stdio: 'inherit', cancelSignal },
+    { ...outputOptions(captureOutput), cancelSignal },
   );
 };

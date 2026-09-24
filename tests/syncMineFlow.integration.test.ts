@@ -11,6 +11,11 @@ import { logger } from '@/infra/logger.js';
 
 import { commitFile, createTestRepos, git, TestRepos } from './helpers/gitRepos.js';
 
+vi.mock('ora', async (importOriginal) => {
+  const { default: ora } = await importOriginal<typeof import('ora')>();
+  return { default: (options: object) => ora({ ...options, isSilent: true }) };
+});
+
 vi.mock('@/domains/mr/glab.service.js', () => ({
   checkGlabAuth: vi.fn(),
   listMyOpenMergeRequests: vi.fn(),
@@ -19,7 +24,14 @@ vi.mock('@/domains/mr/glab.service.js', () => ({
 const mockedCheckGlabAuth = vi.mocked(checkGlabAuth);
 const mockedListMyOpenMergeRequests = vi.mocked(listMyOpenMergeRequests);
 
-const mr = (iid: string, sourceBranch: string) => ({ iid, sourceBranch, targetBranch: 'develop' });
+const mr = (iid: string, sourceBranch: string) => ({
+  iid,
+  sourceBranch,
+  targetBranch: 'develop',
+  sourceProjectId: 1,
+  targetProjectId: 1,
+  draft: false,
+});
 
 let repos: TestRepos;
 
@@ -107,14 +119,16 @@ describe('runSyncMineFlow against real repos', () => {
     await git(repos.other, 'checkout', '-q', 'feat/a');
     await git(repos.other, 'rebase', '-q', 'origin/develop');
     await git(repos.other, 'push', '-q', '--force', 'origin', 'feat/a');
-    const rebased = await originSha('feat/a');
+    await git(repos.other, 'checkout', '-q', 'develop');
+    const laterDevelopSha = await advanceDevelop('later.txt', 'later\n');
     mockedListMyOpenMergeRequests.mockResolvedValue([mr('1', 'feat/a')]);
 
     await runSyncMineFlow({ yes: true });
 
-    expect(await originSha('feat/a')).toBe(rebased);
-    expect(await isAncestor(developSha, rebased)).toBe(true);
-    expect(await git(repos.user, 'rev-parse', 'refs/heads/feat/a')).toBe(rebased);
+    const synced = await originSha('feat/a');
+    expect(await isAncestor(developSha, synced)).toBe(true);
+    expect(await isAncestor(laterDevelopSha, synced)).toBe(true);
+    expect(await git(repos.user, 'rev-parse', 'refs/heads/feat/a')).toBe(synced);
     expect(process.exitCode).toBeUndefined();
   });
 
@@ -137,6 +151,36 @@ describe('runSyncMineFlow against real repos', () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it('reports an up-to-date MR without checking it out and fails a missing branch', async () => {
+    await pushFeature('feat/current', 'c.txt');
+    await pushFeature('feat/b', 'b.txt');
+    await advanceDevelop();
+    await git(repos.other, 'fetch', '-q', 'origin');
+    await git(repos.other, 'checkout', '-q', 'feat/b');
+    await git(repos.other, 'rebase', '-q', 'origin/develop');
+    await git(repos.other, 'push', '-q', '--force', 'origin', 'feat/b');
+    const upToDate = await originSha('feat/b');
+    const reflog = () => git(repos.user, 'reflog', '--format=%gs', 'HEAD');
+    const reflogBefore = await reflog();
+
+    mockedListMyOpenMergeRequests.mockResolvedValue([mr('1', 'feat/b'), mr('2', 'feat/gone')]);
+    const success = vi.spyOn(logger, 'success');
+    const error = vi.spyOn(logger, 'error');
+
+    await runSyncMineFlow({ yes: true });
+
+    expect(await originSha('feat/b')).toBe(upToDate);
+    const newEntries = (await reflog()).slice(0, -reflogBefore.length);
+    expect(newEntries).not.toContain('feat/b');
+    expect(success).toHaveBeenCalledWith(
+      expect.stringContaining('!1: feat/b -> develop — up-to-date'),
+    );
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('!2: feat/gone -> develop — failed (origin/feat/gone not found)'),
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
   it('restores the original branch with no rebase in progress after Ctrl+C mid-rebase', async () => {
     await pushFeature('feat/slow', 'slow1.txt', 'slow2.txt');
     await pushFeature('feat/b', 'b.txt');
@@ -146,7 +190,7 @@ describe('runSyncMineFlow against real repos', () => {
 
     const marker = path.join(repos.user, '.git', 'rebase-started');
     const hook = path.join(repos.user, '.git', 'hooks', 'post-commit');
-    await writeFile(hook, `#!/bin/sh\necho $PPID > "${marker}"\nexec sleep 5\n`);
+    await writeFile(hook, `#!/bin/sh\necho $PPID $$ > "${marker}"\nexec sleep 5\n`);
     await chmod(hook, 0o755);
     const error = vi.spyOn(logger, 'error');
     const exit = vi.fn();
@@ -154,10 +198,10 @@ describe('runSyncMineFlow against real repos', () => {
 
     const flow = runSyncMineFlow({ yes: true });
     await vi.waitFor(() => expect(existsSync(marker)).toBe(true), { timeout: 10_000 });
-    const rebasePid = Number((await readFile(marker, 'utf8')).trim());
+    const pids = (await readFile(marker, 'utf8')).trim().split(' ').map(Number);
 
-    // A real Ctrl+C reaches git too, since it shares the terminal's process group.
-    process.kill(rebasePid, 'SIGINT');
+    // A real Ctrl+C reaches git and its hook too, since they share the terminal's process group.
+    for (const pid of pids) process.kill(pid, 'SIGINT');
     await interrupt();
     await flow;
 
