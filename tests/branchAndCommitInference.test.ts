@@ -16,6 +16,11 @@ describe('branch and commit inference helpers', () => {
       expect(inferIntentFromBranch('ORD-1325/fix_payment_retry')).toBe('fix payment retry');
     });
 
+    it('removes every shared branch type prefix', () => {
+      expect(inferIntentFromBranch('hotfix/payment-retry')).toBe('payment retry');
+      expect(inferIntentFromBranch('security/ORD-1325-sanitize-input')).toBe('sanitize input');
+    });
+
     it('returns undefined when no intent remains', () => {
       expect(inferIntentFromBranch('fix/')).toBeUndefined();
     });
@@ -28,10 +33,18 @@ describe('branch and commit inference helpers', () => {
       expect(inferCommitTypeFromBranch('refactor/release-flow')).toBe('refactor');
       expect(inferCommitTypeFromBranch('docs/readme')).toBe('docs');
       expect(inferCommitTypeFromBranch('chore/update-deps')).toBe('chore');
+      expect(inferCommitTypeFromBranch('test/cover-sync')).toBe('test');
+      expect(inferCommitTypeFromBranch('ci/cache-deps')).toBe('ci');
+      expect(inferCommitTypeFromBranch('perf/lazy-load')).toBe('perf');
+    });
+
+    it('maps hotfix and security branches to fix', () => {
+      expect(inferCommitTypeFromBranch('hotfix/payment-retry')).toBe('fix');
+      expect(inferCommitTypeFromBranch('security/sanitize-input')).toBe('fix');
     });
 
     it('returns undefined for unknown branch prefixes', () => {
-      expect(inferCommitTypeFromBranch('hotfix/payment-retry')).toBeUndefined();
+      expect(inferCommitTypeFromBranch('spike/payment-retry')).toBeUndefined();
     });
   });
 

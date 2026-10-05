@@ -1,6 +1,11 @@
+import { COMMIT_TYPES } from '@/domains/branch/branch.constants.js';
+
 import { CommitContext } from './flows/resolveCommitContext.flow.js';
 
-const CONVENTIONAL_PREFIX = /^(feat|fix|refactor|docs|chore|test|perf)(?:\(([^)]+)\))?:\s*(.+)$/i;
+const CONVENTIONAL_PREFIX = new RegExp(
+  `^(${COMMIT_TYPES.join('|')})(?:\\(([^)]+)\\))?:\\s*(.+)$`,
+  'i',
+);
 const DEFAULT_COMMIT_TYPE = 'chore';
 const MAX_COMMIT_LENGTH = 100;
 const DANGLING_TRAILING_WORDS = new Set([

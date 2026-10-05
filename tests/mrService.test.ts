@@ -26,6 +26,18 @@ describe('merge request service helpers', () => {
         'https://gitlab.com/acme/axon/-/merge_requests/new?merge_request[source_branch]=release/ORD-1325&merge_request[target_branch]=main',
       );
     });
+
+    it('builds an https URL from an SSH remote', () => {
+      expect(
+        createMergeRequestUrl({
+          remoteOriginUrl: 'git@gitlab.com:acme/axon.git',
+          sourceBranch: 'feat/ORD-1',
+          targetBranch: 'main',
+        }),
+      ).toBe(
+        'https://gitlab.com/acme/axon/-/merge_requests/new?merge_request[source_branch]=feat/ORD-1&merge_request[target_branch]=main',
+      );
+    });
   });
 
   describe('isGitLabProject', () => {
@@ -47,11 +59,20 @@ describe('merge request service helpers', () => {
       });
     });
 
+    it.each(['git@gitlab.com:acme/axon.git', 'ssh://git@gitlab.com:2222/acme/axon.git'])(
+      'detects SSH gitlab.com remote %s',
+      async (url) => {
+        mockedGetRemoteOriginUrl.mockResolvedValueOnce(url);
+
+        await expect(isGitLabProject()).resolves.toEqual({ isGitlab: true, url });
+      },
+    );
+
     it('returns false with no url for empty or invalid remotes', async () => {
       mockedGetRemoteOriginUrl.mockResolvedValueOnce('');
       await expect(isGitLabProject()).resolves.toEqual({ isGitlab: false, url: null });
 
-      mockedGetRemoteOriginUrl.mockResolvedValueOnce('git@gitlab.com:acme/axon.git');
+      mockedGetRemoteOriginUrl.mockResolvedValueOnce('/srv/repos/axon.git');
       await expect(isGitLabProject()).resolves.toEqual({ isGitlab: false, url: null });
     });
   });

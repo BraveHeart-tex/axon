@@ -24,6 +24,7 @@ export const runHooksFlow = async () => {
   }
 
   const context = await getHookContext(repoRoot);
+  const obsoleteBlocks = getObsoleteHookBlocks(context.axonHooksDir);
 
   const installedIds = new Set(
     HOOKS.filter((hook) =>
@@ -58,6 +59,21 @@ export const runHooksFlow = async () => {
     },
   });
 
+  for (const { hookFile, ids } of obsoleteBlocks) {
+    syncHookFile({
+      axonHooksDir: context.axonHooksDir,
+      usesHusky: context.usesHusky,
+      hookFile,
+      nextHookIds: getInstalledHookIdsForFile({
+        hooksDir: context.axonHooksDir,
+        hookFile,
+      }),
+    });
+    for (const id of ids) {
+      console.log(`${c.red('✘')} ${c.bold(id)}: removed (obsolete)`);
+    }
+  }
+
   const selectedIds = new Set(selectedHooks.map((hook) => hook.id));
   const toUninstall = HOOKS.filter(
     (hook) => installedIds.has(hook.id) && !selectedIds.has(hook.id),
@@ -67,7 +83,7 @@ export const runHooksFlow = async () => {
   for (const hook of toUninstall) {
     syncHookFile({
       axonHooksDir: context.axonHooksDir,
-      hasHuskyShim: context.hasHuskyShim,
+      usesHusky: context.usesHusky,
       hookFile: hook.hookFile,
       nextHookIds: getInstalledHookIdsForFile({
         hooksDir: context.axonHooksDir,
@@ -89,7 +105,7 @@ export const runHooksFlow = async () => {
 
     syncHookFile({
       axonHooksDir: context.axonHooksDir,
-      hasHuskyShim: context.hasHuskyShim,
+      usesHusky: context.usesHusky,
       hookFile: hook.hookFile,
       nextHookIds,
     });
@@ -101,23 +117,46 @@ export const runHooksFlow = async () => {
   console.log(c.cyan('\n  Done! Your repository hooks are synchronized.'));
 };
 
+const HUSKY_HOOKS_PATH = '.husky/_';
+
 const getRepoRoot = async () => {
   const { stdout } = await execa('git', ['rev-parse', '--show-toplevel']);
   return stdout.trim();
 };
 
+const getGitCommonDir = async (repoRoot: string) => {
+  const { stdout } = await execa('git', ['rev-parse', '--git-common-dir'], { cwd: repoRoot });
+  return path.resolve(repoRoot, stdout.trim());
+};
+
 const getHookContext = async (repoRoot: string) => {
   const currentHooksPath = await getLocalHooksPath(repoRoot);
-  const axonHooksPath = '.git/axon-hooks';
-  const axonHooksDir = path.join(repoRoot, '.git', 'axon-hooks');
+  const gitCommonDir = await getGitCommonDir(repoRoot);
+  const axonHooksDir = path.join(gitCommonDir, 'axon-hooks');
 
   return {
     repoRoot,
     axonHooksDir,
-    axonHooksPath,
+    axonHooksPath: axonHooksDir,
     currentHooksPath,
-    hasHuskyShim: fs.existsSync(path.join(repoRoot, '.husky', '_')),
+    usesHusky: detectHusky({ repoRoot, gitCommonDir, currentHooksPath }),
   };
+};
+
+const detectHusky = ({
+  repoRoot,
+  gitCommonDir,
+  currentHooksPath,
+}: {
+  repoRoot: string;
+  gitCommonDir: string;
+  currentHooksPath: string | null;
+}) => {
+  if (currentHooksPath === HUSKY_HOOKS_PATH) return true;
+  if (fs.existsSync(path.join(repoRoot, '.husky'))) return true;
+
+  const mainWorktree = path.basename(gitCommonDir) === '.git' ? path.dirname(gitCommonDir) : null;
+  return mainWorktree !== null && fs.existsSync(path.join(mainWorktree, HUSKY_HOOKS_PATH));
 };
 
 const getLocalHooksPath = async (repoRoot: string) => {
@@ -192,14 +231,34 @@ const getInstalledHookIdsForFile = ({
     }),
   ).map((hook) => hook.id);
 
+const HOOK_START_MARKER = /^# AXON_START: (.+)$/gm;
+
+const getObsoleteHookBlocks = (axonHooksDir: string) => {
+  if (!fs.existsSync(axonHooksDir)) return [];
+
+  const catalogIds = new Set(HOOKS.map((hook) => hook.id));
+
+  return fs
+    .readdirSync(axonHooksDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const content = fs.readFileSync(path.join(axonHooksDir, entry.name), 'utf8');
+      const ids = [...content.matchAll(HOOK_START_MARKER)]
+        .map((match) => match[1].trim())
+        .filter((id) => !catalogIds.has(id));
+      return { hookFile: entry.name, ids };
+    })
+    .filter(({ ids }) => ids.length > 0);
+};
+
 const syncHookFile = ({
   axonHooksDir,
-  hasHuskyShim,
+  usesHusky,
   hookFile,
   nextHookIds,
 }: {
   axonHooksDir: string;
-  hasHuskyShim: boolean;
+  usesHusky: boolean;
   hookFile: string;
   nextHookIds: string[];
 }) => {
@@ -220,7 +279,7 @@ const syncHookFile = ({
   const wrapper = buildHookWrapper({
     hookFile,
     hookDefinitions,
-    hasHuskyShim,
+    usesHusky,
   });
 
   fs.writeFileSync(filePath, wrapper, { mode: 0o755 });
@@ -232,13 +291,13 @@ const reconcileLocalHooksPath = async ({
   axonHooksDir,
   axonHooksPath,
   currentHooksPath,
-  hasHuskyShim,
+  usesHusky,
 }: {
   repoRoot: string;
   axonHooksDir: string;
   axonHooksPath: string;
   currentHooksPath: string | null;
-  hasHuskyShim: boolean;
+  usesHusky: boolean;
 }) => {
   if (hasRemainingAxonHooks(axonHooksDir)) {
     if (currentHooksPath !== axonHooksPath) {
@@ -250,11 +309,11 @@ const reconcileLocalHooksPath = async ({
     return;
   }
 
-  if (hasHuskyShim) {
-    if (currentHooksPath !== '.husky/_') {
+  if (usesHusky) {
+    if (currentHooksPath !== HUSKY_HOOKS_PATH) {
       await setLocalHooksPath({
         repoRoot,
-        hooksPath: '.husky/_',
+        hooksPath: HUSKY_HOOKS_PATH,
       });
     }
     return;
@@ -274,15 +333,15 @@ const hasRemainingAxonHooks = (axonHooksDir: string) => {
 const buildHookWrapper = ({
   hookFile,
   hookDefinitions,
-  hasHuskyShim,
+  usesHusky,
 }: {
   hookFile: string;
   hookDefinitions: HookDefinition[];
-  hasHuskyShim: boolean;
+  usesHusky: boolean;
 }) => {
   const sections = ['#!/usr/bin/env sh'];
 
-  if (hasHuskyShim) {
+  if (usesHusky) {
     sections.push(
       `if [ -x ".husky/_/${hookFile}" ]; then\n  ".husky/_/${hookFile}" "$@" || exit $?\nfi`,
     );

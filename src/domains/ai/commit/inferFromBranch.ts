@@ -1,8 +1,10 @@
-import { CommitType } from './types.js';
+import { BRANCH_TYPES, CommitType, toCommitType } from '@/domains/branch/branch.constants.js';
+
+const BRANCH_TYPE_PREFIX = new RegExp(`^(${BRANCH_TYPES.join('|')})[/|-]`);
 
 export const inferIntentFromBranch = (branch: string): string | undefined => {
   const cleaned = branch
-    .replace(/^(feat|fix|refactor|chore|docs)[/|-]/, '')
+    .replace(BRANCH_TYPE_PREFIX, '')
     .replace(/^[A-Z]+-\d+[/|-]/, '')
     .replace(/[-_]/g, ' ')
     .trim();
@@ -11,10 +13,6 @@ export const inferIntentFromBranch = (branch: string): string | undefined => {
 };
 
 export const inferCommitTypeFromBranch = (branch: string): CommitType | undefined => {
-  if (branch.startsWith('feat/')) return 'feat';
-  if (branch.startsWith('fix/')) return 'fix';
-  if (branch.startsWith('refactor/')) return 'refactor';
-  if (branch.startsWith('docs/')) return 'docs';
-  if (branch.startsWith('chore/')) return 'chore';
-  return undefined;
+  const type = BRANCH_TYPES.find((candidate) => branch.startsWith(`${candidate}/`));
+  return type ? toCommitType(type) : undefined;
 };

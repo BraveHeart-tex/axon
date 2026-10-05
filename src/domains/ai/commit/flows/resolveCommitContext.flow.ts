@@ -1,3 +1,4 @@
+import { CommitType } from '@/domains/branch/branch.constants.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
@@ -6,7 +7,6 @@ import {
 import { editMessageInline } from '@/shared/editMessageInline.js';
 
 import { inferCommitTypeFromBranch, inferIntentFromBranch } from '../inferFromBranch.js';
-import { CommitType } from '../types.js';
 
 export interface CommitContext {
   diff: string;

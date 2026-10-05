@@ -2,6 +2,7 @@ import {
   COMMIT_DIFF_MAX_CHARS,
   COMMIT_MESSAGE_MAX_OUTPUT_CHARS,
 } from '@/domains/ai/ai.constants.js';
+import { COMMIT_TYPES } from '@/domains/branch/branch.constants.js';
 
 import { AiMessage } from './ai.service.js';
 import { CommitContext } from './commit/flows/resolveCommitContext.flow.js';
@@ -17,7 +18,7 @@ If the true "why" is not stated, describe the most meaningful outcome of the cha
 - No trailing punctuation
 - Active voice, present tense
 - Format: type(scope): summary  or  type: summary
-- Valid types: feat, fix, refactor, docs, chore, test, perf
+- Valid types: ${COMMIT_TYPES.join(', ')}
 - Prefer the provided commit type/scope hints when present
 - Be specific enough that a teammate can understand the actual outcome without opening the diff
 ## Decision order

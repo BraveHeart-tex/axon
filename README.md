@@ -8,7 +8,6 @@ Axon is a command-line tool I built to automate my daily development workflows. 
 
 - **AI-Powered Commit Messages**: Generate meaningful commit messages using AI based on your staged changes
 - **Branch Management**: Create feature and release branches with proper naming conventions
-- **Backport Bracnh Flows**: Sync commits between main and develop branches
 - **Secure Configuration**: Store API keys securely using your system's credential
 
 ## Installation

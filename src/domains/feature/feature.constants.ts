@@ -1,21 +1,10 @@
-export const COMMIT_LABELS = [
-  'feat',
-  'fix',
-  'chore',
-  'docs',
-  'refactor',
-  'test',
-  'ci',
-  'perf',
-  'hotfix',
-  'security',
-] as const;
+import type { BranchType } from '@/domains/branch/branch.constants.js';
 
-const WORK_TYPE_BRANCH_TYPE: Record<string, (typeof COMMIT_LABELS)[number]> = {
+const WORK_TYPE_BRANCH_TYPE: Record<string, BranchType> = {
   bug: 'fix',
 };
 
-export const suggestBranchType = (workType?: string): string | undefined => {
+export const suggestBranchType = (workType?: string): BranchType | undefined => {
   if (!workType) return undefined;
   return WORK_TYPE_BRANCH_TYPE[workType.toLowerCase()];
 };

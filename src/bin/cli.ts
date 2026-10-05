@@ -57,7 +57,7 @@ program
 program
   .command('hooks')
   .alias('h')
-  .description('Manage Git hooks for release branches, sync reminders, and commit validation')
+  .description('Manage Git hooks for release branches and commit validation')
   .action(async () => {
     await runHooksFlow();
   });

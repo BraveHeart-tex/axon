@@ -37,18 +37,6 @@ fi
 `.trim(),
   },
   {
-    id: 'suggest-sync',
-    name: 'Suggest Sync-back',
-    hookFile: 'post-commit',
-    description: 'Remind me to run "axon sync" after a release/* commit.',
-    script: `
-BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-if [ "\${BRANCH_NAME#release/}" != "$BRANCH_NAME" ]; then
-  printf "\\n\\033[36m[AXON] TIP\\033[0m\\n"
-  printf "Run \\033[1;32maxon sync\\033[0m to backport this fix.\\n\\n"
-fi`.trim(),
-  },
-  {
     id: 'warn-jira-mismatch',
     name: 'Warn on Jira Mismatch',
     hookFile: 'commit-msg',

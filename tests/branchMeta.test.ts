@@ -1,6 +1,7 @@
 import inquirer from 'inquirer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BRANCH_TYPES } from '@/domains/branch/branch.constants.js';
 import { suggestBranchType } from '@/domains/feature/feature.constants.js';
 import { resolveBranchMeta } from '@/domains/feature/flows/resolveBranchMeta.flow.js';
 
@@ -39,6 +40,15 @@ describe('feature branch metadata helpers', () => {
         commitLabel: 'fix',
         slug: 'payment-retry-cleanup',
       });
+    });
+
+    it('offers the shared branch types', async () => {
+      mockedPrompt.mockResolvedValueOnce({ commitLabel: 'hotfix', shortDesc: '' });
+
+      await resolveBranchMeta('ORD-1325');
+
+      const [questions] = mockedPrompt.mock.calls[0] as unknown as [{ choices?: unknown }[]];
+      expect(questions[0]?.choices).toEqual(BRANCH_TYPES);
     });
 
     it('returns an empty slug for an empty description', async () => {

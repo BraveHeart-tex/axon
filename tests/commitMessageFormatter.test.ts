@@ -48,4 +48,13 @@ describe('normalizeGeneratedCommitMessage', () => {
       'fix(LONG-SCOPE-1234567890): improve generated commit suggestions for staged changes and branch',
     );
   });
+
+  it('accepts every shared commit type', () => {
+    const message = normalizeGeneratedCommitMessage('ci: cache yarn dependencies', {
+      expectedType: 'fix',
+      inferredScope: undefined,
+    });
+
+    expect(message).toBe('ci: cache yarn dependencies');
+  });
 });

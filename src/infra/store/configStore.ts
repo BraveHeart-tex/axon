@@ -7,7 +7,7 @@ import { CliMode } from '@/domains/mode/mode.types.js';
 const DEFAULT_AXON_DIR = path.join(os.homedir(), '.axon');
 const AXON_CONFIG_DIR_ENV_KEY = 'AXON_CONFIG_DIR';
 
-const getAxonDir = () => process.env[AXON_CONFIG_DIR_ENV_KEY] || DEFAULT_AXON_DIR;
+export const getAxonDir = () => process.env[AXON_CONFIG_DIR_ENV_KEY] || DEFAULT_AXON_DIR;
 
 const getConfigPath = () => path.join(getAxonDir(), 'config.json');
 
