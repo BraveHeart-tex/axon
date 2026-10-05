@@ -3,17 +3,7 @@ import { generateText } from 'ai';
 
 import { AI_MODELS } from '@/domains/ai/ai.constants.js';
 
-import { resolveAiModel } from './ai.config.js';
-
-const createAiModel = (apiKey: string) => {
-  const groq = createGroq({ apiKey });
-  const modelId = resolveAiModel();
-
-  return {
-    model: groq(modelId),
-    modelId,
-  };
-};
+import type { AiModel } from './ai.types.js';
 
 export interface AiMessage {
   role: 'user' | 'assistant';
@@ -48,15 +38,15 @@ export const generateAiResponse = async ({
   apiKey,
   system,
   messages,
+  modelId,
 }: {
   apiKey: string;
   system: string;
   messages: AiMessage[];
+  modelId: AiModel;
 }): Promise<string> => {
-  const { model, modelId } = createAiModel(apiKey);
-
   const { text } = await generateText({
-    model,
+    model: createGroq({ apiKey })(modelId),
     system,
     messages,
     temperature: 0.2,

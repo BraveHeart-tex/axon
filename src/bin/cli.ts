@@ -5,10 +5,13 @@ import { aiModelCommand } from '@/commands/aiModel.js';
 import { commitAiCommand } from '@/commands/commitAi.js';
 import { configCommand } from '@/commands/config.js';
 import { featureCommand } from '@/commands/feature.js';
+import { initCommand } from '@/commands/init.js';
 import { modeCommand } from '@/commands/mode.js';
 import { releaseCommand } from '@/commands/release.js';
 import { syncBranchCommand } from '@/commands/syncBranch.js';
 import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
+import { printFlowBanner, reportProjectContextError } from '@/domains/project/project.formatter.js';
+import { initProjectContext } from '@/domains/project/project.service.js';
 import { createInterruptHandler } from '@/infra/cancellation.js';
 import { AXON_LOGO } from '@/misc/logo.js';
 
@@ -18,6 +21,34 @@ program.name('axon').description('Personal workflow assistant').version('1.0.0')
 
 program.addHelpText('before', AXON_LOGO);
 program.addHelpText('afterAll', ' ');
+
+const COMMANDS_WITHOUT_CONTEXT = new Set(['init']);
+const COMMANDS_WITH_FLOW_BANNER = new Set([
+  'feature',
+  'release',
+  'commit-ai',
+  'hooks',
+  'sync-branch',
+]);
+
+program.hook('preAction', async (_program, actionCommand) => {
+  if (COMMANDS_WITHOUT_CONTEXT.has(actionCommand.name())) return;
+
+  try {
+    const context = await initProjectContext();
+    if (COMMANDS_WITH_FLOW_BANNER.has(actionCommand.name())) printFlowBanner(context);
+  } catch (error) {
+    reportProjectContextError(error);
+    process.exit(1);
+  }
+});
+
+program
+  .command('init')
+  .description(
+    'Configure the workflow for this repo. The config is saved under ~/.axon/projects, never in the repo.',
+  )
+  .action(initCommand);
 
 program
   .command('feature')

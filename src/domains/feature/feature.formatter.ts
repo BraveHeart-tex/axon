@@ -1,6 +1,7 @@
 import { Separator } from '@inquirer/prompts';
 import c from 'ansi-colors';
 
+import { JIRA_STATUS_ORDER } from '@/domains/jira/jira.constants.js';
 import type { JiraIssue } from '@/domains/jira/jira.types.js';
 import { truncate } from '@/misc/truncate.js';
 
@@ -11,8 +12,6 @@ const STATUS_STYLES: Record<string, string> = {
   Done: c.green.bold('● DONE       '),
   Blocked: c.red.bold('● BLOCKED    '),
 };
-
-const STATUS_ORDER = ['Blocked', 'In Progress', 'In Review', 'To Do', 'Done'];
 
 const getStatusHeader = (status: string) =>
   STATUS_STYLES[status] ?? c.white.bold(`● ${status.toUpperCase().padEnd(11)}`);
@@ -41,7 +40,7 @@ export const buildIssueChoices = (issues: JiraIssue[]) => {
 
   const choices = [];
 
-  for (const status of STATUS_ORDER) {
+  for (const status of JIRA_STATUS_ORDER) {
     const group = groups.get(status);
     if (!group?.length) continue;
 

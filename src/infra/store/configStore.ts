@@ -9,7 +9,7 @@ const AXON_CONFIG_DIR_ENV_KEY = 'AXON_CONFIG_DIR';
 
 export const getAxonDir = () => process.env[AXON_CONFIG_DIR_ENV_KEY] || DEFAULT_AXON_DIR;
 
-const getConfigPath = () => path.join(getAxonDir(), 'config.json');
+export const getConfigPath = () => path.join(getAxonDir(), 'config.json');
 
 export interface AxonConfig {
   mode: CliMode;

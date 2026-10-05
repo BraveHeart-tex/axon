@@ -113,11 +113,11 @@ These were tested in a scratch repo:
 
 ### 1a. Identity and file
 
-- [ ] Project id:
+- [x] Project id:
   - If `git config --get axon.project` is set, use that name.
   - Otherwise use the remote key of `origin`.
   - With no `origin` or no repo, there is no project, and the context comes from global config only.
-- [ ] File: `~/.axon/projects/<slug>.json`, or under `$AXON_CONFIG_DIR/projects/`.
+- [x] File: `~/.axon/projects/<slug>.json`, or under `$AXON_CONFIG_DIR/projects/`.
   - Build the slug from the id by replacing `/` with `__` and dropping anything outside `[A-Za-z0-9._-]`.
 
 ### 1b. Schema (`src/domains/project/project.schema.ts`, zod)
@@ -143,65 +143,65 @@ These were tested in a scratch repo:
 }
 ```
 
-- [ ] Use a discriminated union on `flow`:
+- [x] Use a discriminated union on `flow`:
   - `gitflow` takes `{ mainBranch, developBranch, releasePrefix }` with the defaults `main`, `develop` and `release/`.
   - `classified` takes the block shown above.
-- [ ] Every other key is optional and falls back to global config, then to today's constants.
-- [ ] `branchTemplate` must contain `{key}`, and may contain `{type}` and `{slug}`.
-- [ ] `version` must be `1`. An unknown version is an error that names the version axon supports.
-- [ ] A bad file throws `ProjectConfigError`, listing each problem as `<path>: <key>: <expected>, got <actual>`.
+- [x] Every other key is optional and falls back to global config, then to today's constants.
+- [x] `branchTemplate` must contain `{key}`, and may contain `{type}` and `{slug}`.
+- [x] `version` must be `1`. An unknown version is an error that names the version axon supports.
+- [x] A bad file throws `ProjectConfigError`, listing each problem as `<path>: <key>: <expected>, got <actual>`.
   - `cli.ts` prints it and exits 1.
   - It never falls back silently.
 
 ### 1c. Resolution (`src/domains/project/project.service.ts`)
 
-- [ ] `resolveProjectContext()` merges the sources in this order: env (`AXON_AI_MODEL`), then project, then global, then defaults. It returns:
+- [x] `resolveProjectContext()` merges the sources in this order: env (`AXON_AI_MODEL`), then project, then global, then defaults. It returns:
 
   ```ts
   { id, configPath, source: 'project' | 'global', flow, branchTemplate, jira, mode, aiModel }
   ```
 
-- [ ] Resolve it once in a commander `preAction` hook, memoize it, and expose `getProjectContext()` to the command handlers.
+- [x] Resolve it once in a commander `preAction` hook, memoize it, and expose `getProjectContext()` to the command handlers.
   - Handlers pass it into flows as a parameter. Domains never read config files directly.
   - Commands that don't need a repo (`config`, `ai-model`) must still work outside a git repo.
-- [ ] Route the current readers through the context:
+- [x] Route the current readers through the context:
   - `getCliModeConfig`
   - the Jira JQL, URL and email getters
   - the AI model resolution
-- [ ] **Flow banner:** `feature`, `release`, `sb`, `commit-ai` and `hooks` print one dim line before they start, such as `flow: classified · ~/.axon/projects/…json`.
+- [x] **Flow banner:** `feature`, `release`, `sb`, `commit-ai` and `hooks` print one dim line before they start, such as `flow: classified · ~/.axon/projects/…json`.
   - With no project config, the line is `flow: gitflow (default) · run axon init to configure this repo`.
 
 ### 1d. `axon init`
 
-- [ ] It reads `origin` and shows the remote key.
-- [ ] It suggests a flow: `classified` when the remote path ends in `letgo-turkey/classifieds/frontends/pwa/classified`, otherwise `gitflow`. The user confirms or changes it.
-- [ ] It asks for:
+- [x] It reads `origin` and shows the remote key.
+- [x] It suggests a flow: `classified` when the remote path ends in `letgo-turkey/classifieds/frontends/pwa/classified`, otherwise `gitflow`. The user confirms or changes it.
+- [x] It asks for:
   - the branch names, with the flow defaults prefilled
   - the branch template
   - the Jira keys, JQL and mode, prefilled from global config
-- [ ] If a file already exists, init prefills from it, so a re-run is the edit flow.
-- [ ] It writes the file with 2-space indentation and prints the path, plus a note that the file can be edited by hand.
-- [ ] Cancelling a prompt writes nothing and exits cleanly.
+- [x] If a file already exists, init prefills from it, so a re-run is the edit flow.
+- [x] It writes the file with 2-space indentation and prints the path, plus a note that the file can be edited by hand.
+- [x] Cancelling a prompt writes nothing and exits cleanly.
 
 ### 1e. `axon mode`
 
-- [ ] If a project config exists, `axon mode` writes to it. Otherwise it writes to global config.
-- [ ] It prints which file it wrote.
+- [x] If a project config exists, `axon mode` writes to it. Otherwise it writes to global config.
+- [x] It prints which file it wrote.
 
 ### 1f. Tests
 
-- [ ] Remote parsing for each URL form.
-- [ ] Slugging.
-- [ ] The `axon.project` override.
-- [ ] Merge precedence.
-- [ ] Each validation error message.
-- [ ] No-config parity: resolution with no project config gives today's values.
-- [ ] `init` writes the expected file, re-runs prefilled, and writes nothing on cancel.
+- [x] Remote parsing for each URL form.
+- [x] Slugging.
+- [x] The `axon.project` override.
+- [x] Merge precedence.
+- [x] Each validation error message.
+- [x] No-config parity: resolution with no project config gives today's values.
+- [x] `init` writes the expected file, re-runs prefilled, and writes nothing on cancel.
 
 **Done when:**
 
-- [ ] Every existing test passes unchanged.
-- [ ] `axon init` works in a scratch repo.
+- [x] Every existing test passes unchanged.
+- [x] `axon init` works in a scratch repo.
 
 ## Phase 2 - `feature`, `release`, `hooks`, Jira
 

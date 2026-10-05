@@ -1,6 +1,11 @@
 import { CLI_MODES } from '@/domains/mode/mode.constants.js';
 import { setCliModeConfig } from '@/domains/mode/mode.service.js';
 import { CliMode } from '@/domains/mode/mode.types.js';
+import {
+  formatConfigPath,
+  reportProjectContextError,
+} from '@/domains/project/project.formatter.js';
+import { getProjectContext } from '@/domains/project/project.service.js';
 import { logger } from '@/infra/logger.js';
 
 export const modeCommand = async (type: CliMode) => {
@@ -9,11 +14,19 @@ export const modeCommand = async (type: CliMode) => {
     process.exit(1);
   }
 
-  setCliModeConfig(type);
+  let writtenPath: string;
+  try {
+    writtenPath = setCliModeConfig(type, getProjectContext());
+  } catch (error) {
+    reportProjectContextError(error);
+    process.exit(1);
+  }
 
   if (type === CLI_MODES.JIRA) {
     logger.info('CLI Mode set to JIRA');
   } else if (type === CLI_MODES.DEFAULT) {
     logger.info('CLI Mode set to DEFAULT');
   }
+
+  logger.info(`Saved to ${formatConfigPath(writtenPath)}`);
 };

@@ -1,3 +1,4 @@
+import type { JiraSettings } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
 
 import {
@@ -18,10 +19,10 @@ interface JiraRequestContext {
   authHeader: string;
 }
 
-const getJiraRequestContext = async (): Promise<JiraRequestContext> => {
+const getJiraRequestContext = async (jira: JiraSettings): Promise<JiraRequestContext> => {
   const apiKey = await getJiraApiKeyOrPrompt();
-  const cloudUrl = await getJiraCloudUrlOrPrompt();
-  const email = await getJiraEmailOrPrompt();
+  const cloudUrl = await getJiraCloudUrlOrPrompt(jira);
+  const email = await getJiraEmailOrPrompt(jira);
 
   return {
     cloudUrl,
@@ -29,10 +30,10 @@ const getJiraRequestContext = async (): Promise<JiraRequestContext> => {
   };
 };
 
-export const getJiraIssues = async (): Promise<JiraIssue[]> => {
+export const getJiraIssues = async (jira: JiraSettings): Promise<JiraIssue[]> => {
   try {
-    const { cloudUrl, authHeader } = await getJiraRequestContext();
-    const jql = await getJiraJqlOrPrompt();
+    const { cloudUrl, authHeader } = await getJiraRequestContext(jira);
+    const jql = await getJiraJqlOrPrompt(jira);
 
     const requestUrl = new URL(`${cloudUrl}/rest/api/3/search/jql`);
     requestUrl.searchParams.set('jql', jql);
@@ -61,8 +62,11 @@ export const getJiraIssues = async (): Promise<JiraIssue[]> => {
   }
 };
 
-export const getIssueTransitions = async (issueKey: string): Promise<JiraTransition[]> => {
-  const { cloudUrl, authHeader } = await getJiraRequestContext();
+export const getIssueTransitions = async (
+  issueKey: string,
+  jira: JiraSettings,
+): Promise<JiraTransition[]> => {
+  const { cloudUrl, authHeader } = await getJiraRequestContext(jira);
 
   const requestUrl = new URL(`${cloudUrl}/rest/api/3/issue/${issueKey}/transitions`);
 
@@ -84,8 +88,12 @@ export const getIssueTransitions = async (issueKey: string): Promise<JiraTransit
   return data.transitions;
 };
 
-export const transitionIssue = async (issueKey: string, transitionId: string): Promise<void> => {
-  const { cloudUrl, authHeader } = await getJiraRequestContext();
+export const transitionIssue = async (
+  issueKey: string,
+  transitionId: string,
+  jira: JiraSettings,
+): Promise<void> => {
+  const { cloudUrl, authHeader } = await getJiraRequestContext(jira);
 
   const requestUrl = new URL(`${cloudUrl}/rest/api/3/issue/${issueKey}/transitions`);
 

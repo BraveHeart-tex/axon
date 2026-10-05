@@ -318,6 +318,21 @@ export const getRemoteOriginUrl = async () => {
   return stdout;
 };
 
+export const isInsideGitRepository = async () => {
+  const result = await execa('git', ['rev-parse', '--git-dir'], { reject: false });
+  return result.exitCode === 0;
+};
+
+export const getGitConfigValue = async (key: string) => {
+  const result = await execa('git', ['config', '--get', key], { reject: false });
+  return result.exitCode === 0 ? result.stdout.trim() : '';
+};
+
+export const findRemoteOriginUrl = async () => {
+  const result = await execa('git', ['remote', 'get-url', 'origin'], { reject: false });
+  return result.exitCode === 0 ? result.stdout.trim() : '';
+};
+
 export const remoteBranchExists = async (branchName: string) => {
   const result = await execa('git', ['ls-remote', '--exit-code', '--heads', 'origin', branchName], {
     reject: false,

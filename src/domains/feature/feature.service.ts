@@ -7,16 +7,16 @@ import { promptRebaseDivergedBranch } from '@/ui/prompts/git.prompts.js';
 import { checkoutAndCreateBranch } from '../git/flows/checkoutAndCreateBranch.flow.js';
 import { fetchBranchFromRemote, remoteBranchExists } from '../git/git.service.js';
 import { CLI_MODES } from '../mode/mode.constants.js';
-import { getCliModeConfig } from '../mode/mode.service.js';
+import type { ProjectContext } from '../project/project.types.js';
 import { resolveBranchMeta } from './flows/resolveBranchMeta.flow.js';
 import { resolveIssueKey } from './flows/resolveIssueKey.flow.js';
 import { updateIssueStatus } from './flows/updateIssueStatus.flow.js';
 
-export const runFeatureFlow = async () => {
-  const cliMode = getCliModeConfig();
+export const runFeatureFlow = async (context: ProjectContext) => {
+  const cliMode = context.mode;
 
   const [{ issueKey, workType, currentStatus }, baseBranch] = await Promise.all([
-    resolveIssueKey(cliMode),
+    resolveIssueKey(cliMode, context.jira),
     remoteBranchExists('develop').then((exists) => (exists ? 'develop' : 'main')),
   ]);
 
@@ -56,6 +56,6 @@ export const runFeatureFlow = async () => {
   console.log(`\n  ${c.green('✔')} Ready: ${c.green.bold(branch)}\n`);
 
   if (cliMode === CLI_MODES.JIRA) {
-    await updateIssueStatus(issueKey, currentStatus);
+    await updateIssueStatus(context.jira, issueKey, currentStatus);
   }
 };

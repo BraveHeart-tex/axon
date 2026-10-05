@@ -1,7 +1,8 @@
+import type { AiModelSource, ProjectContext } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
-import { readConfig, writeConfig } from '@/infra/store/configStore.js';
+import { writeConfig } from '@/infra/store/configStore.js';
 
-import { AI_MODEL_ENV_KEY, AI_MODELS, DEFAULT_AI_MODEL } from './ai.constants.js';
+import { AI_MODEL_ENV_KEY, AI_MODELS } from './ai.constants.js';
 import { AiModel } from './ai.types.js';
 
 const SUPPORTED_AI_MODELS = new Set<string>(Object.values(AI_MODELS));
@@ -28,35 +29,24 @@ export const clearStoredAiModel = (): void => {
   writeConfig({ aiModel: '' });
 };
 
-export const resolveAiModel = (): AiModel => {
-  const envModel = process.env[AI_MODEL_ENV_KEY];
-  if (envModel) {
-    return validateAiModel(envModel, AI_MODEL_ENV_KEY);
-  }
-
-  const storedModel = readConfig().aiModel;
-  if (storedModel) {
-    return validateAiModel(storedModel, 'config');
-  }
-
-  return DEFAULT_AI_MODEL;
+const SOURCE_LABELS: Record<AiModelSource, string> = {
+  env: AI_MODEL_ENV_KEY,
+  project: 'project config',
+  global: 'config',
+  default: 'default',
 };
 
-export const showAiModelStatus = (): void => {
-  const envModel = process.env[AI_MODEL_ENV_KEY];
-  const storedModel = readConfig().aiModel;
+const STATUS_LABELS: Record<AiModelSource, string> = {
+  env: `from ${AI_MODEL_ENV_KEY}`,
+  project: 'project config',
+  global: 'saved config',
+  default: 'default',
+};
 
-  if (envModel) {
-    const resolvedModel = validateAiModel(envModel, AI_MODEL_ENV_KEY);
-    logger.info(`AI model: ${resolvedModel} (from ${AI_MODEL_ENV_KEY})`);
-    return;
-  }
+export const resolveAiModel = (context: ProjectContext): AiModel =>
+  validateAiModel(context.aiModel, SOURCE_LABELS[context.aiModelSource]);
 
-  if (storedModel) {
-    const resolvedModel = validateAiModel(storedModel, 'config');
-    logger.info(`AI model: ${resolvedModel} (saved config)`);
-    return;
-  }
-
-  logger.info(`AI model: ${DEFAULT_AI_MODEL} (default)`);
+export const showAiModelStatus = (context: ProjectContext): void => {
+  const resolvedModel = resolveAiModel(context);
+  logger.info(`AI model: ${resolvedModel} (${STATUS_LABELS[context.aiModelSource]})`);
 };

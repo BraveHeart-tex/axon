@@ -5,6 +5,7 @@ import {
   showAiModelStatus,
 } from '@/domains/ai/ai.config.js';
 import { AiModel } from '@/domains/ai/ai.types.js';
+import { getProjectContext } from '@/domains/project/project.service.js';
 import { logger } from '@/infra/logger.js';
 
 export const aiModelCommand = async (
@@ -23,7 +24,7 @@ export const aiModelCommand = async (
   }
 
   if (!model) {
-    showAiModelStatus();
+    showAiModelStatus(getProjectContext());
     return;
   }
 

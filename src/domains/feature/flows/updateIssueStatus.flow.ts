@@ -4,8 +4,10 @@ import ora from 'ora';
 
 import { IN_PROGRESS_STATUS } from '@/domains/jira/jira.constants.js';
 import { getIssueTransitions, transitionIssue } from '@/domains/jira/jira.service.js';
+import type { JiraSettings } from '@/domains/project/project.types.js';
 
 export const updateIssueStatus = async (
+  jira: JiraSettings,
   issueKey: string,
   currentStatus?: string,
 ): Promise<void> => {
@@ -27,7 +29,7 @@ export const updateIssueStatus = async (
 
   let transitions;
   try {
-    transitions = await getIssueTransitions(issueKey);
+    transitions = await getIssueTransitions(issueKey, jira);
   } catch (error) {
     spinner.warn(`Could not fetch transitions: ${(error as Error).message}`);
     return;
@@ -53,7 +55,7 @@ export const updateIssueStatus = async (
 
   const updateSpinner = ora(`Updating ${issueKey}...`).start();
   try {
-    await transitionIssue(issueKey, transitionId);
+    await transitionIssue(issueKey, transitionId, jira);
   } catch (error) {
     updateSpinner.warn(`Could not update Jira status: ${(error as Error).message}`);
     return;

@@ -29,6 +29,15 @@ const mockedSelect = vi.mocked(select);
 const mockedGetIssueTransitions = vi.mocked(getIssueTransitions);
 const mockedTransitionIssue = vi.mocked(transitionIssue);
 
+const jira = {
+  projectKeys: ['ORD'],
+  inProgressStatus: 'In Progress',
+  statusOrder: ['In Progress', 'To Do'],
+  jql: 'project = ORD',
+  cloudUrl: 'https://acme.atlassian.net',
+  email: 'me@acme.com',
+};
+
 const transitions = [
   { id: '11', name: 'Start', to: { id: '3', name: 'In Progress' } },
   { id: '21', name: 'Done', to: { id: '5', name: 'Done' } },
@@ -45,7 +54,7 @@ describe('updateIssueStatus', () => {
   });
 
   it('skips without prompting when the ticket is already In Progress', async () => {
-    await updateIssueStatus('ORD-1325', 'in progress');
+    await updateIssueStatus(jira, 'ORD-1325', 'in progress');
 
     expect(mockedConfirm).not.toHaveBeenCalled();
     expect(mockedGetIssueTransitions).not.toHaveBeenCalled();
@@ -55,7 +64,7 @@ describe('updateIssueStatus', () => {
   it('does not fetch transitions when the user declines', async () => {
     mockedConfirm.mockResolvedValueOnce(false);
 
-    await updateIssueStatus('ORD-1325', 'To Do');
+    await updateIssueStatus(jira, 'ORD-1325', 'To Do');
 
     expect(mockedGetIssueTransitions).not.toHaveBeenCalled();
     expect(mockedTransitionIssue).not.toHaveBeenCalled();
@@ -64,22 +73,22 @@ describe('updateIssueStatus', () => {
   it('warns and does not transition when there are no available transitions', async () => {
     mockedGetIssueTransitions.mockResolvedValueOnce([]);
 
-    await updateIssueStatus('ORD-1325', 'To Do');
+    await updateIssueStatus(jira, 'ORD-1325', 'To Do');
 
     expect(mockedSelect).not.toHaveBeenCalled();
     expect(mockedTransitionIssue).not.toHaveBeenCalled();
   });
 
   it('transitions the issue with the selected transition id when confirmed', async () => {
-    await updateIssueStatus('ORD-1325', 'To Do');
+    await updateIssueStatus(jira, 'ORD-1325', 'To Do');
 
-    expect(mockedGetIssueTransitions).toHaveBeenCalledWith('ORD-1325');
-    expect(mockedTransitionIssue).toHaveBeenCalledWith('ORD-1325', '11');
+    expect(mockedGetIssueTransitions).toHaveBeenCalledWith('ORD-1325', jira);
+    expect(mockedTransitionIssue).toHaveBeenCalledWith('ORD-1325', '11', jira);
   });
 
   it('does not throw when the transition request fails', async () => {
     mockedTransitionIssue.mockRejectedValueOnce(new Error('403 Forbidden'));
 
-    await expect(updateIssueStatus('ORD-1325', 'To Do')).resolves.toBeUndefined();
+    await expect(updateIssueStatus(jira, 'ORD-1325', 'To Do')).resolves.toBeUndefined();
   });
 });

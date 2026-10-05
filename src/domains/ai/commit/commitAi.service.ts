@@ -3,15 +3,17 @@ import c from 'ansi-colors';
 import ora from 'ora';
 
 import { commitWithMessage, pushCurrentBranch } from '@/domains/git/git.service.js';
+import type { ProjectContext } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
 import { editMessageInline } from '@/shared/editMessageInline.js';
 
+import { resolveAiModel } from '../ai.config.js';
 import { getCommitMessagePrompt } from '../ai.prompts.js';
 import { generateAiResponse } from '../ai.service.js';
 import { normalizeGeneratedCommitMessage } from './commitMessageFormatter.js';
 import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
 import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';
-export const runCommitAiFlow = async () => {
+export const runCommitAiFlow = async (projectContext: ProjectContext) => {
   try {
     const apiKey = await ensureAiApiKey();
     const context = await resolveCommitContext();
@@ -26,7 +28,13 @@ export const runCommitAiFlow = async () => {
       const spinner = ora('Generating commit message...').start();
 
       try {
-        message = await generateMessage(apiKey, context, rejectedMessages, userFeedback);
+        message = await generateMessage(
+          projectContext,
+          apiKey,
+          context,
+          rejectedMessages,
+          userFeedback,
+        );
         spinner.stop();
       } catch (error) {
         spinner.fail('Generation failed');
@@ -111,6 +119,7 @@ export const runCommitAiFlow = async () => {
 };
 
 const generateMessage = async (
+  projectContext: ProjectContext,
   apiKey: string,
   context: Awaited<ReturnType<typeof resolveCommitContext>>,
   previousMessages: string[] = [],
@@ -118,6 +127,7 @@ const generateMessage = async (
 ): Promise<string> => {
   const raw = await generateAiResponse({
     apiKey,
+    modelId: resolveAiModel(projectContext),
     ...getCommitMessagePrompt(context, previousMessages, feedback),
   });
 

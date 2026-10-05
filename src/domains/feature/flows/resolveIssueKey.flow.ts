@@ -5,6 +5,7 @@ import ora from 'ora';
 import { JIRA_REGEX } from '@/domains/jira/jira.constants.js';
 import { getJiraIssues } from '@/domains/jira/jira.service.js';
 import { CLI_MODES } from '@/domains/mode/mode.constants.js';
+import type { JiraSettings } from '@/domains/project/project.types.js';
 
 import { buildIssueChoices } from '../feature.formatter.js';
 
@@ -14,13 +15,16 @@ interface ResolvedIssue {
   currentStatus?: string;
 }
 
-export const resolveIssueKey = async (cliMode: string): Promise<ResolvedIssue> => {
+export const resolveIssueKey = async (
+  cliMode: string,
+  jira: JiraSettings,
+): Promise<ResolvedIssue> => {
   if (cliMode !== CLI_MODES.JIRA) {
     return { issueKey: await promptForIssueKey() };
   }
 
   const spinner = ora('Fetching Jira issues...').start();
-  const issues = await getJiraIssues();
+  const issues = await getJiraIssues(jira);
 
   if (issues.length === 0) {
     spinner.warn('No Jira issues matched your saved JQL. Please enter the issue key manually.');
