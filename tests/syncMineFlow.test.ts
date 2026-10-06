@@ -131,6 +131,7 @@ const mr = (iid: string, sourceBranch: string, overrides: Partial<MyMergeRequest
   sourceProjectId: 7,
   targetProjectId: 7,
   draft: false,
+  labels: [],
   ...overrides,
 });
 
@@ -261,8 +262,8 @@ describe('runSyncMineFlow', () => {
     expect(mockedPushWithLeases).not.toHaveBeenCalled();
     expect(mockedUpdateLocalBranchRef).not.toHaveBeenCalled();
     expect(summaryLines()).toEqual([
-      expect.stringContaining('!1: feat/one -> develop — not run (lock lost)'),
-      expect.stringContaining('!2: feat/two -> develop — not run (lock lost)'),
+      expect.stringContaining('!1: feat/one -> develop - not run (lock lost)'),
+      expect.stringContaining('!2: feat/two -> develop - not run (lock lost)'),
     ]);
     expect(logger.error).toHaveBeenCalledWith(
       'Another sync took over the lock during this run. Wait for it to finish, then rerun.',
@@ -462,7 +463,7 @@ describe('runSyncMineFlow', () => {
       pushOptions(false),
     );
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — failed (conflict)'),
+      expect.stringContaining('!1: feat/one -> develop - failed (conflict)'),
     );
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringContaining('git checkout feat/one && axon sb develop'),
@@ -520,7 +521,7 @@ describe('runSyncMineFlow', () => {
       pushOptions(false),
     );
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — skipped (local-only commits)'),
+      expect.stringContaining('!1: feat/one -> develop - skipped (local-only commits)'),
     );
     expect(process.exitCode).toBeUndefined();
   });
@@ -534,7 +535,7 @@ describe('runSyncMineFlow', () => {
     expect(mockedReplayOnto).not.toHaveBeenCalled();
     expect(mockedPushWithLeases).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — failed (Failed to count commits)'),
+      expect.stringContaining('!1: feat/one -> develop - failed (Failed to count commits)'),
     );
     expect(process.exitCode).toBe(1);
   });
@@ -565,7 +566,7 @@ describe('runSyncMineFlow', () => {
 
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        `!1: ${skipped.sourceBranch} -> ${skipped.targetBranch} — skipped (${reason})`,
+        `!1: ${skipped.sourceBranch} -> ${skipped.targetBranch} - skipped (${reason})`,
       ),
     );
     expect(mockedConfirm).not.toHaveBeenCalled();
@@ -605,7 +606,7 @@ describe('runSyncMineFlow', () => {
       gitOptions,
     );
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('!3: feat/gone -> develop — failed (origin/feat/gone not found)'),
+      expect.stringContaining('!3: feat/gone -> develop - failed (origin/feat/gone not found)'),
     );
     expect(mockedReplayOnto).toHaveBeenCalledTimes(2);
     expect(mockedPushWithLeases).toHaveBeenCalledExactlyOnceWith(
@@ -634,7 +635,7 @@ describe('runSyncMineFlow', () => {
     expect(mockedAddDetachedWorktree).not.toHaveBeenCalled();
     expect(mockedPushWithLeases).not.toHaveBeenCalled();
     expect(logger.success).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — up-to-date'),
+      expect.stringContaining('!1: feat/one -> develop - up-to-date'),
     );
     expect(process.exitCode).toBeUndefined();
   });
@@ -723,7 +724,7 @@ describe('runSyncMineFlow', () => {
       expect(mockedReplayOnto).toHaveBeenCalledTimes(1);
       expect(mockedPushWithLeases).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('!2: feat/two -> feat/one — skipped (parent failed)'),
+        expect.stringContaining('!2: feat/two -> feat/one - skipped (parent failed)'),
       );
       expect(process.exitCode).toBe(1);
     });
@@ -742,7 +743,7 @@ describe('runSyncMineFlow', () => {
       expect(mockedReplayOnto).toHaveBeenCalledTimes(1);
       expect(mockedPushWithLeases).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('!3: feat/three -> feat/two — skipped (parent failed)'),
+        expect.stringContaining('!3: feat/three -> feat/two - skipped (parent failed)'),
       );
     });
 
@@ -756,7 +757,7 @@ describe('runSyncMineFlow', () => {
       await run();
 
       expect(mockedReplayOnto).not.toHaveBeenCalled();
-      expect(summaryLines().map((line) => line.split(' — ')[1])).toEqual([
+      expect(summaryLines().map((line) => line.split(' - ')[1])).toEqual([
         'skipped (parent failed)',
         'failed (cycle)',
         'failed (cycle)',
@@ -778,10 +779,10 @@ describe('runSyncMineFlow', () => {
       await run();
 
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('!2: feat/two -> feat/one — failed (remote changed)'),
+        expect.stringContaining('!2: feat/two -> feat/one - failed (remote changed)'),
       );
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('!1: feat/one -> develop — skipped (stack rejected)'),
+        expect.stringContaining('!1: feat/one -> develop - skipped (stack rejected)'),
       );
       expect(mockedUpdateLocalBranchRef).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
@@ -812,6 +813,14 @@ describe('runSyncMineFlow', () => {
     expect(mockedReplayOnto).toHaveBeenCalledTimes(5);
   });
 
+  it('accepts classified flags under gitflow with an explanatory note', async () => {
+    mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
+    await run({ all: true, includeQa: true });
+    expect(logger.info).toHaveBeenCalledWith('--all has no effect in the gitflow flow');
+    expect(logger.info).toHaveBeenCalledWith('--include-qa has no effect in the gitflow flow');
+    expect(mockedReplayOnto).toHaveBeenCalledTimes(1);
+  });
+
   it('counts an up-to-date push line as synced', async () => {
     mockedListMyOpenMergeRequests.mockResolvedValueOnce([mrOne]);
     mockedPushWithLeases.mockImplementationOnce(async (updates) =>
@@ -821,7 +830,7 @@ describe('runSyncMineFlow', () => {
     await run();
 
     expect(logger.success).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — synced'),
+      expect.stringContaining('!1: feat/one -> develop - synced'),
     );
   });
 
@@ -839,10 +848,10 @@ describe('runSyncMineFlow', () => {
     await run();
 
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — failed (remote changed)'),
+      expect.stringContaining('!1: feat/one -> develop - failed (remote changed)'),
     );
     expect(logger.success).toHaveBeenCalledWith(
-      expect.stringContaining('!2: feat/two -> develop — synced'),
+      expect.stringContaining('!2: feat/two -> develop - synced'),
     );
     expect(process.exitCode).toBe(1);
   });
@@ -863,7 +872,7 @@ describe('runSyncMineFlow', () => {
 
     expect(mockedPushWithLeases).toHaveBeenCalledTimes(2);
     expect(logger.success).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — synced'),
+      expect.stringContaining('!1: feat/one -> develop - synced'),
     );
   });
 
@@ -930,8 +939,8 @@ describe('runSyncMineFlow', () => {
     expect(ora).toHaveBeenCalledWith(
       expect.objectContaining({ text: '[2/2] !2 feat/two -> develop' }),
     );
-    expect(spinner.info).toHaveBeenCalledWith('[1/2] !1 feat/one -> develop — up-to-date');
-    expect(spinner.succeed).toHaveBeenCalledWith('[2/2] !2 feat/two -> develop — synced');
+    expect(spinner.info).toHaveBeenCalledWith('[1/2] !1 feat/one -> develop - up-to-date');
+    expect(spinner.succeed).toHaveBeenCalledWith('[2/2] !2 feat/two -> develop - synced');
   });
 
   it('groups the summary by status and lists every MR exactly once', async () => {
@@ -949,7 +958,7 @@ describe('runSyncMineFlow', () => {
 
     await run();
 
-    expect(summaryLines().map((line) => line.split(' — ')[1])).toEqual([
+    expect(summaryLines().map((line) => line.split(' - ')[1])).toEqual([
       'synced',
       'up-to-date',
       'skipped (draft)',
@@ -974,10 +983,10 @@ describe('runSyncMineFlow', () => {
 
     expect(mockedReplayOnto).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/one -> develop — not run (fetch failed)'),
+      expect.stringContaining('!1: feat/one -> develop - not run (fetch failed)'),
     );
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('!2: feat/draft -> develop — skipped (draft)'),
+      expect.stringContaining('!2: feat/draft -> develop - skipped (draft)'),
     );
     expect(logger.error).toHaveBeenCalledWith('Failed to fetch from origin: boom');
     expect(process.exitCode).toBe(1);
@@ -1004,7 +1013,7 @@ describe('runSyncMineFlow', () => {
 
       expect(mockedReplayOnto).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('!1: feat/one -> develop — not run (interrupted)'),
+        expect.stringContaining('!1: feat/one -> develop - not run (interrupted)'),
       );
       expect(logger.error).not.toHaveBeenCalledWith('fetch killed');
       expect(releaseLock).toHaveBeenCalled();
@@ -1031,10 +1040,10 @@ describe('runSyncMineFlow', () => {
       expect(mockedDeleteBranchesQuietly).toHaveBeenCalledWith(['axon-sync/1'], quiet);
       expect(releaseLock).toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('!1: feat/one -> develop — interrupted (Ctrl+C)'),
+        expect.stringContaining('!1: feat/one -> develop - interrupted (Ctrl+C)'),
       );
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('!2: feat/two -> develop — not run (interrupted)'),
+        expect.stringContaining('!2: feat/two -> develop - not run (interrupted)'),
       );
       expect(spinner.stop).toHaveBeenCalled();
       expect(process.exitCode).toBe(130);
@@ -1073,10 +1082,10 @@ describe('runSyncMineFlow', () => {
 
       expect(mockedUpdateLocalBranchRef).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('!1: feat/one -> develop — interrupted (rerun to verify)'),
+        expect.stringContaining('!1: feat/one -> develop - interrupted (rerun to verify)'),
       );
       expect(logger.success).toHaveBeenCalledWith(
-        expect.stringContaining('!2: feat/two -> develop — up-to-date'),
+        expect.stringContaining('!2: feat/two -> develop - up-to-date'),
       );
       expect(process.exitCode).toBe(130);
     });

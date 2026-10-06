@@ -7,6 +7,7 @@ export type MyMergeRequest = {
   sourceProjectId: number;
   targetProjectId: number;
   draft: boolean;
+  labels: string[];
 };
 
 type RawMergeRequest = {
@@ -15,6 +16,7 @@ type RawMergeRequest = {
   target_branch: string;
   source_project_id: number;
   target_project_id: number;
+  labels?: string[];
   draft?: boolean;
   work_in_progress?: boolean;
 };
@@ -101,8 +103,17 @@ export const listMyOpenMergeRequests = async (): Promise<MyMergeRequest[]> => {
       sourceProjectId: mr.source_project_id,
       targetProjectId: mr.target_project_id,
       draft: Boolean(mr.draft || mr.work_in_progress),
+      labels: mr.labels ?? [],
     });
   }
 
   return [...byIid.values()];
+};
+
+export const hasMrApprovals = async (mr: MyMergeRequest, cancelSignal: AbortSignal) => {
+  const command = `projects/${mr.targetProjectId}/merge_requests/${mr.iid}/approvals`;
+  const { stdout } = await execa('glab', ['api', command], { cancelSignal });
+  const approvals = parseGlabJson<{ approved_by: unknown[] }>('glab api approvals', stdout);
+  if (!Array.isArray(approvals.approved_by)) throw new Error('Invalid approvals response');
+  return approvals.approved_by.length > 0;
 };

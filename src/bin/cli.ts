@@ -104,6 +104,8 @@ program
   )
   .option('-y, --yes', 'Skip the confirmation prompt when using --mine')
   .option('--concurrency <n>', 'With --mine, how many MRs to rebase at once (default: 4)')
+  .option('--all', 'With --mine, rebase approved MRs too')
+  .option('--include-qa', 'With --mine, rebase QA-passed MRs too')
   .option('--keep-worktrees', 'With --mine, keep the fallback rebase worktrees for debugging')
   .description(
     'Rebase the current branch onto origin/<target> and push with --force-with-lease. ' +

@@ -234,6 +234,65 @@ export const listRemoteBranches = async (
   }
 };
 
+export const listRemoteHeads = async (options: GitCallOptions = {}) => {
+  const { stdout } = await execa(
+    'git',
+    gitArgs(['ls-remote', '--heads', 'origin'], options.skipHooks),
+    {
+      cancelSignal: options.cancelSignal,
+      env: noPromptEnv,
+    },
+  );
+  return new Map(
+    stdout
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [sha, ref] = line.split('\t');
+        return [ref.slice('refs/heads/'.length), sha];
+      }),
+  );
+};
+
+export const listStagingMrs = async (options: GitCallOptions = {}) => {
+  const { stdout } = await execa(
+    'git',
+    gitArgs(['ls-remote', 'origin', 'refs/staging/*'], options.skipHooks),
+    {
+      cancelSignal: options.cancelSignal,
+      env: noPromptEnv,
+    },
+  );
+  return new Set(
+    stdout
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => line.split('\t')[1].slice('refs/staging/'.length)),
+  );
+};
+
+export const listCommitShas = async (base: string, tip: string, options: GitCallOptions = {}) => {
+  const { stdout } = await execa(
+    'git',
+    gitArgs(['rev-list', `${base}..${tip}`], options.skipHooks),
+    {
+      cancelSignal: options.cancelSignal,
+    },
+  );
+  return new Set(stdout.split('\n').filter(Boolean));
+};
+
+export const hasFixupCommits = async (base: string, tip: string, options: GitCallOptions = {}) => {
+  const { stdout } = await execa(
+    'git',
+    gitArgs(['log', '--format=%s', `${base}..${tip}`], options.skipHooks),
+    {
+      cancelSignal: options.cancelSignal,
+    },
+  );
+  return stdout.split('\n').some((subject) => /^(fixup!|squash!|amend!) /.test(subject));
+};
+
 export const fetchOriginBranches = async (
   branches: string[],
   { cancelSignal, skipHooks }: GitCallOptions = {},
@@ -612,12 +671,28 @@ export const rebaseWorktreeOnto = async (
   dir: string,
   base: string,
   upstream: string,
-  { cancelSignal, skipHooks }: GitCallOptions = {},
+  { cancelSignal, skipHooks, autosquash }: GitCallOptions & { autosquash?: boolean } = {},
 ) => {
-  await execa('git', gitArgs(['-C', dir, 'rebase', '--onto', base, upstream], skipHooks), {
-    cancelSignal,
-    env: noPromptEnv,
-  });
+  await execa(
+    'git',
+    gitArgs(
+      [
+        '-C',
+        dir,
+        ...(autosquash ? ['-c', 'sequence.editor=:'] : []),
+        'rebase',
+        ...(autosquash ? ['-i', '--autosquash'] : []),
+        '--onto',
+        base,
+        upstream,
+      ],
+      skipHooks,
+    ),
+    {
+      cancelSignal,
+      env: { ...noPromptEnv, ...(autosquash ? { GIT_EDITOR: ':' } : {}) },
+    },
+  );
 
   const { stdout } = await execa('git', gitArgs(['-C', dir, 'rev-parse', 'HEAD'], skipHooks), {
     cancelSignal,

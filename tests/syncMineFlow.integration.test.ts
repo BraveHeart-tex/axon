@@ -32,6 +32,7 @@ const mr = (iid: string, sourceBranch: string, targetBranch = 'develop') => ({
   sourceProjectId: 1,
   targetProjectId: 1,
   draft: false,
+  labels: [],
 });
 
 let repos: TestRepos;
@@ -224,10 +225,10 @@ describe('runSyncMineFlow against real repos', () => {
     const newEntries = (await reflog()).slice(0, -reflogBefore.length);
     expect(newEntries).not.toContain('feat/b');
     expect(success).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/b -> develop — up-to-date'),
+      expect.stringContaining('!1: feat/b -> develop - up-to-date'),
     );
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('!2: feat/gone -> develop — failed (origin/feat/gone not found)'),
+      expect.stringContaining('!2: feat/gone -> develop - failed (origin/feat/gone not found)'),
     );
     expect(process.exitCode).toBe(1);
   });
@@ -255,8 +256,8 @@ describe('runSyncMineFlow against real repos', () => {
     await sync();
 
     expect(await snapshot()).toEqual(before);
-    expect(success).toHaveBeenCalledWith(expect.stringContaining('!1: feat/a -> develop — synced'));
-    expect(success).toHaveBeenCalledWith(expect.stringContaining('!2: feat/m -> develop — synced'));
+    expect(success).toHaveBeenCalledWith(expect.stringContaining('!1: feat/a -> develop - synced'));
+    expect(success).toHaveBeenCalledWith(expect.stringContaining('!2: feat/m -> develop - synced'));
     expect(await leftovers()).toEqual(noLeftovers);
     expect(process.exitCode).toBeUndefined();
   });
@@ -304,10 +305,10 @@ describe('runSyncMineFlow against real repos', () => {
 
     expect({ a: await originSha('feat/a'), b: await originSha('feat/b') }).toEqual(before);
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/a -> develop — failed (conflict)'),
+      expect.stringContaining('!1: feat/a -> develop - failed (conflict)'),
     );
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('!2: feat/b -> feat/a — skipped (parent failed)'),
+      expect.stringContaining('!2: feat/b -> feat/a - skipped (parent failed)'),
     );
     expect(await leftovers()).toEqual(noLeftovers);
     expect(process.exitCode).toBe(1);
@@ -418,12 +419,12 @@ describe('runSyncMineFlow against real repos', () => {
     expect(await originSha('feat/a')).toBe(parentBefore);
     expect(await originSha('feat/b')).toBe(await git(repos.other, 'rev-parse', 'HEAD'));
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('!2: feat/b -> feat/a — failed (remote changed)'),
+      expect.stringContaining('!2: feat/b -> feat/a - failed (remote changed)'),
     );
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/a -> develop — skipped (stack rejected)'),
+      expect.stringContaining('!1: feat/a -> develop - skipped (stack rejected)'),
     );
-    expect(success).toHaveBeenCalledWith(expect.stringContaining('!3: feat/m -> develop — synced'));
+    expect(success).toHaveBeenCalledWith(expect.stringContaining('!3: feat/m -> develop - synced'));
     expect(process.exitCode).toBe(1);
   });
 
@@ -451,10 +452,10 @@ describe('runSyncMineFlow against real repos', () => {
     expect(await leftovers()).toEqual(noLeftovers);
     expect(await originSha('feat/slow')).toBe(before);
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/slow -> develop — interrupted (Ctrl+C)'),
+      expect.stringContaining('!1: feat/slow -> develop - interrupted (Ctrl+C)'),
     );
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('!2: feat/b -> develop — not run (interrupted)'),
+      expect.stringContaining('!2: feat/b -> develop - not run (interrupted)'),
     );
     expect(process.exitCode).toBe(130);
   }, 20_000);
@@ -486,7 +487,7 @@ describe('runSyncMineFlow against real repos', () => {
     expect(exit).toHaveBeenCalledExactlyOnceWith(130);
     expect(process.exitCode).toBe(130);
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/a -> develop — interrupted (rerun to verify)'),
+      expect.stringContaining('!1: feat/a -> develop - interrupted (rerun to verify)'),
     );
     expect(await leftovers()).toEqual(noLeftovers);
     expect(await isAncestor(developSha, await originSha('feat/a'))).toBe(true);
@@ -497,7 +498,7 @@ describe('runSyncMineFlow against real repos', () => {
     await sync();
 
     expect(success).toHaveBeenCalledWith(
-      expect.stringContaining('!1: feat/a -> develop — up-to-date'),
+      expect.stringContaining('!1: feat/a -> develop - up-to-date'),
     );
     expect(process.exitCode).toBeUndefined();
   }, 20_000);

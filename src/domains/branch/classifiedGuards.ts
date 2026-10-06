@@ -9,13 +9,21 @@ import {
 import type { FlowSettings } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
 
-const gitOutput = async (...args: string[]) => (await execa('git', args)).stdout;
+type GuardOptions = { cancelSignal?: AbortSignal; skipHooks?: boolean };
 
-const listCommits = async (base: string) => {
+const gitOutput = async (args: string[], options: GuardOptions = {}) =>
+  (
+    await execa(
+      'git',
+      [...(options.skipHooks ? ['-c', 'core.hooksPath=/dev/null'] : []), ...args],
+      { cancelSignal: options.cancelSignal },
+    )
+  ).stdout;
+
+const listCommits = async (base: string, tip = 'HEAD', options: GuardOptions = {}) => {
   const output = await gitOutput(
-    'log',
-    '--format=%H%x00%ae%x00%P%x00%s%x00%(trailers:key=Staging-MR)%x1e',
-    `${base}..HEAD`,
+    ['log', '--format=%H%x00%ae%x00%P%x00%s%x00%(trailers:key=Staging-MR)%x1e', `${base}..${tip}`],
+    options,
   );
   return output
     .split('\x1e')
@@ -28,13 +36,13 @@ const listCommits = async (base: string) => {
 };
 
 export const detectClassifiedParent = async (currentBranch: string, flow: FlowSettings) => {
-  const output = await gitOutput(
+  const output = await gitOutput([
     'for-each-ref',
     '--format=%(refname:strip=3)',
     '--merged=HEAD',
     `--no-merged=origin/${flow.mainBranch}`,
     'refs/remotes/origin',
-  );
+  ]);
   const candidates = output
     .split('\n')
     .filter(
@@ -74,23 +82,9 @@ export const checkClassifiedCommits = async (target: string, flow: FlowSettings)
       `origin/${flow.mainBranch} not found. Check the configured main branch and fetch origin, then run axon sb.`,
     );
   }
-  const commits = await listCommits(`origin/${flow.mainBranch}`);
-  const develop = (await remoteTrackingBranchExists(flow.developBranch))
-    ? new Set(
-        (
-          await gitOutput('rev-list', `origin/${flow.mainBranch}..origin/${flow.developBranch}`)
-        ).split('\n'),
-      )
-    : new Set<string>();
-  const offending = commits.filter((commit) => commit.trailer || develop.has(commit.sha));
-  if (offending.length) {
-    throw new Error(
-      `Branch contains develop commits:\n${offending.map(({ sha, subject }) => `${sha.slice(0, 12)} ${subject}`).join('\n')}\nRun git rebase -i origin/${flow.mainBranch}, drop the listed commits, then run axon sb.`,
-    );
-  }
+  const { offending, foreign } = await inspectClassifiedCommits('HEAD', flow);
+  if (offending.length) throw new Error(developCommitsHint(offending, flow));
   if (target !== flow.mainBranch) return true;
-  const email = await getGitConfigValue('user.email');
-  const foreign = commits.filter((commit) => commit.email !== email);
   if (!foreign.length) return true;
   logger.warn(
     `${foreign.length} commits by other authors will be rebased onto ${flow.mainBranch}.`,
@@ -101,8 +95,12 @@ export const checkClassifiedCommits = async (target: string, flow: FlowSettings)
   });
 };
 
-export const checkClassifiedPush = async (target: string) => {
-  const offending = (await listCommits(`origin/${target}`)).filter(
+export const checkClassifiedPush = async (
+  target: string,
+  tip = 'HEAD',
+  options: GuardOptions = {},
+) => {
+  const offending = (await listCommits(`origin/${target}`, tip, options)).filter(
     ({ subject, parents }) =>
       /^(fixup!|squash!|amend!) /.test(subject) || parents.split(' ').length > 1,
   );
@@ -112,3 +110,30 @@ export const checkClassifiedPush = async (target: string) => {
     );
   }
 };
+
+export const inspectClassifiedCommits = async (
+  tip: string,
+  flow: FlowSettings,
+  options: GuardOptions = {},
+) => {
+  const commits = await listCommits(`origin/${flow.mainBranch}`, tip, options);
+  const develop = (await remoteTrackingBranchExists(flow.developBranch))
+    ? new Set(
+        (
+          await gitOutput(
+            ['rev-list', `origin/${flow.mainBranch}..origin/${flow.developBranch}`],
+            options,
+          )
+        ).split('\n'),
+      )
+    : new Set<string>();
+  const offending = commits.filter((commit) => commit.trailer || develop.has(commit.sha));
+  const email = await getGitConfigValue('user.email');
+  return { commits, offending, foreign: commits.filter((commit) => commit.email !== email) };
+};
+
+export const developCommitsHint = (
+  offending: Awaited<ReturnType<typeof inspectClassifiedCommits>>['offending'],
+  flow: FlowSettings,
+) =>
+  `Branch contains develop commits:\n${offending.map(({ sha, subject }) => `${sha.slice(0, 12)} ${subject}`).join('\n')}\nRun git rebase -i origin/${flow.mainBranch}, drop the listed commits, then run axon sb.`;

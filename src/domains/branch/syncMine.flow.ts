@@ -5,8 +5,19 @@ import { confirm } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import ora, { Ora } from 'ora';
 
+import {
+  checkClassifiedPush,
+  developCommitsHint,
+  inspectClassifiedCommits,
+} from '@/domains/branch/classifiedGuards.js';
 import { findSyncGuardrail } from '@/domains/branch/syncGuardrail.js';
-import { buildSyncGraph, findStackRoot, isStacked, SyncGraph } from '@/domains/branch/syncStack.js';
+import {
+  buildSyncGraph,
+  findAncestryParent,
+  findStackRoot,
+  isStacked,
+  SyncGraph,
+} from '@/domains/branch/syncStack.js';
 import {
   abortWorktreeRebase,
   addDetachedWorktree,
@@ -18,9 +29,12 @@ import {
   getForkPoint,
   getGitCommonDir,
   getGitVersion,
+  hasFixupCommits,
   isAncestor,
   listLocalBranches,
   listRemoteBranches,
+  listRemoteHeads,
+  listStagingMrs,
   listWorktreePaths,
   pruneWorktrees,
   pushWithLeases,
@@ -32,14 +46,22 @@ import {
 } from '@/domains/git/git.service.js';
 import {
   checkGlabAuth,
+  hasMrApprovals,
   listMyOpenMergeRequests,
   MyMergeRequest,
 } from '@/domains/mr/glab.service.js';
+import type { ProjectContext } from '@/domains/project/project.types.js';
 import { registerCancellation } from '@/infra/cancellation.js';
 import { logger } from '@/infra/logger.js';
 import { acquirePidLock, isLockHeldError, PidLock } from '@/infra/pidLock.js';
 
-type SyncMineOptions = { yes: boolean; concurrency: number; keepWorktrees: boolean };
+type SyncMineOptions = {
+  yes: boolean;
+  concurrency: number;
+  keepWorktrees: boolean;
+  all?: boolean;
+  includeQa?: boolean;
+};
 
 type SyncStatus = 'synced' | 'up-to-date' | 'skipped' | 'failed' | 'interrupted' | 'not run';
 
@@ -54,6 +76,7 @@ const STATUS_ORDER: SyncStatus[] = [
 
 type SyncResult = MyMergeRequest & {
   status: SyncStatus;
+  approvalsUnknown?: boolean;
   reason?: string;
   hint?: string;
 };
@@ -71,6 +94,13 @@ type Rebased = { mr: MyMergeRequest; originSha: string; localSha: string; newSha
 type RebaseOutcome = { rebased: Rebased } | { done: MergeRequestOutcome };
 
 type RunContext = {
+  project?: ProjectContext;
+  all: boolean;
+  includeQa: boolean;
+  listed: MyMergeRequest[];
+  targets: Map<string, string>;
+  ambiguous: Map<string, string[]>;
+  staging: Set<string> | null | undefined;
   signal: AbortSignal;
   workspace: string;
   useReplay: boolean;
@@ -106,9 +136,9 @@ const NETWORK_ERROR =
 // Every git call in --mine runs with hooks disabled.
 const quietGit = { skipHooks: true };
 
-export const runSyncMineFlow = async (options: SyncMineOptions) => {
+export const runSyncMineFlow = async (options: SyncMineOptions, project?: ProjectContext) => {
   try {
-    await syncMine(options);
+    await syncMine(options, project);
   } catch (error) {
     if ((error as Error).name === 'ExitPromptError') {
       logger.info('Sync aborted.');
@@ -120,7 +150,15 @@ export const runSyncMineFlow = async (options: SyncMineOptions) => {
   }
 };
 
-const syncMine = async ({ yes, concurrency, keepWorktrees }: SyncMineOptions) => {
+const syncMine = async (
+  { yes, concurrency, keepWorktrees, all = false, includeQa = false }: SyncMineOptions,
+  project?: ProjectContext,
+) => {
+  if (project?.flow.name !== 'classified') {
+    for (const flag of [all ? '--all' : '', includeQa ? '--include-qa' : ''].filter(Boolean)) {
+      logger.info(`${flag} has no effect in the gitflow flow`);
+    }
+  }
   if (!(await checkGlabAuth())) {
     logger.error('glab is not installed or not authenticated. Run `glab auth login` first.');
     process.exitCode = 1;
@@ -156,10 +194,18 @@ const syncMine = async ({ yes, concurrency, keepWorktrees }: SyncMineOptions) =>
     // A run that took over the lock owns the workspace now.
     if (await lock.isHeld()) await cleanUpWorkspace(workspace);
     await lock.release();
-    if (state.mrs.length > 0) printSummary(state.mrs, state.results, 'interrupted');
+    if (state.mrs.length > 0)
+      printSummary(state.mrs, state.results, 'interrupted', context.staging);
   });
 
   const context: RunContext = {
+    project,
+    all,
+    includeQa,
+    listed: [],
+    targets: new Map(),
+    ambiguous: new Map(),
+    staging: project?.flow.name === 'classified' ? null : undefined,
     signal,
     workspace,
     useReplay,
@@ -220,6 +266,7 @@ const syncListedMergeRequests = async (yes: boolean, state: RunState, context: R
   const { signal, results } = context;
   const mrs = await listMyOpenMergeRequests();
   state.mrs = mrs;
+  context.listed = mrs;
 
   if (mrs.length === 0) {
     logger.info('No open MRs authored by or assigned to you.');
@@ -229,7 +276,7 @@ const syncListedMergeRequests = async (yes: boolean, state: RunState, context: R
   const candidates: MyMergeRequest[] = [];
 
   for (const mr of mrs) {
-    const skipped = checkEligibility(mr);
+    const skipped = checkEligibility(mr, context.project);
 
     if (skipped) {
       results.push(skipped);
@@ -250,7 +297,13 @@ const syncListedMergeRequests = async (yes: boolean, state: RunState, context: R
   }
 
   if (candidates.length === 0) {
-    setExitCode(printSummary(mrs, results));
+    if (context.project?.flow.name === 'classified') {
+      state.run = checkStaging(context).then(() => ({}));
+      await state.run;
+      if (signal.aborted) return;
+      context.progress.stop();
+    }
+    setExitCode(printSummary(mrs, results, undefined, context.staging));
     return;
   }
 
@@ -287,7 +340,7 @@ const syncListedMergeRequests = async (yes: boolean, state: RunState, context: R
   if (signal.aborted) return;
 
   if (outcome.fetchError) {
-    printSummary(mrs, results, 'fetch failed');
+    printSummary(mrs, results, 'fetch failed', context.staging);
     logger.error(outcome.fetchError.message);
     if (needsCredentials(outcome.fetchError.message)) logger.error(CREDENTIALS_HINT);
     process.exitCode = 1;
@@ -295,23 +348,35 @@ const syncListedMergeRequests = async (yes: boolean, state: RunState, context: R
   }
 
   if (outcome.lockLost) {
-    printSummary(mrs, results, 'lock lost');
+    printSummary(mrs, results, 'lock lost', context.staging);
     logger.error(LOCK_LOST);
     process.exitCode = 1;
     return;
   }
 
-  setExitCode(printSummary(mrs, results));
+  setExitCode(printSummary(mrs, results, undefined, context.staging));
 };
 
-const checkEligibility = (mr: MyMergeRequest): SyncResult | undefined => {
+const checkEligibility = (mr: MyMergeRequest, project?: ProjectContext): SyncResult | undefined => {
   if (mr.sourceProjectId !== mr.targetProjectId) {
     return { ...mr, status: 'skipped', reason: 'fork' };
   }
 
   if (mr.draft) return { ...mr, status: 'skipped', reason: 'draft' };
 
-  if (findSyncGuardrail(mr.sourceBranch, mr.targetBranch)) {
+  const flow = project?.flow;
+  if (flow?.name === 'classified') {
+    if (mr.targetBranch === flow.developBranch) {
+      return {
+        ...mr,
+        status: 'skipped',
+        reason: `targets ${flow.developBranch} - retarget to ${flow.mainBranch}`,
+      };
+    }
+    return undefined;
+  }
+
+  if (findSyncGuardrail(mr.sourceBranch, mr.targetBranch, flow)) {
     return {
       ...mr,
       status: 'skipped',
@@ -342,21 +407,59 @@ const cleanUpWorkspace = async (workspace: string) => {
   return worktrees.length + branches.length;
 };
 
+const checkStaging = async (context: RunContext) => {
+  context.progress.step('Checking staging status');
+  try {
+    context.staging = await listStagingMrs({ cancelSignal: context.signal, ...quietGit });
+  } catch (error) {
+    if (context.signal.aborted) return;
+    logger.warn(
+      `Staging status unavailable: ${(error as Error).message}. Check origin access, then rerun.`,
+    );
+  }
+};
+
 const syncAll = async (mrs: MyMergeRequest[], context: RunContext): Promise<RunOutcome> => {
   const { signal, progress } = context;
   const gitOptions = { cancelSignal: signal, ...quietGit };
-  const branches = [...new Set(mrs.flatMap((mr) => [mr.sourceBranch, mr.targetBranch]))];
+  const flow = context.project?.flow;
+  const classified = flow?.name === 'classified';
+  const branches = [
+    ...new Set([
+      ...mrs.flatMap((mr) => [mr.sourceBranch, mr.targetBranch]),
+      ...(classified ? [flow.mainBranch, flow.developBranch] : []),
+    ]),
+  ];
   let remoteBranches: Set<string>;
 
   progress.step(`Fetching ${branches.length} branch(es) from origin`);
 
   try {
     // Fetch only branches that exist: one missing ref makes the whole fetch fail.
-    remoteBranches = await listRemoteBranches(branches, gitOptions);
+    const heads = classified ? await listRemoteHeads(gitOptions) : undefined;
+    remoteBranches = heads ? new Set(heads.keys()) : await listRemoteBranches(branches, gitOptions);
     const existing = branches.filter((branch) => remoteBranches.has(branch));
 
     if (existing.length > 0) await fetchOriginBranches(existing, gitOptions);
 
+    if (classified && heads) {
+      if (!remoteBranches.has(flow.mainBranch))
+        throw new Error(
+          `origin/${flow.mainBranch} not found. Check the configured main branch, then rerun.`,
+        );
+      progress.step('Checking branch ancestry');
+      for (const mr of mrs) {
+        if (!remoteBranches.has(mr.sourceBranch)) continue;
+        const ancestry = await findAncestryParent(mr, heads, flow, gitOptions);
+        if (ancestry.parent) context.targets.set(mr.iid, ancestry.parent);
+        else if (ancestry.candidates.length) context.ambiguous.set(mr.iid, ancestry.candidates);
+      }
+      const parents = [...new Set(context.targets.values())].filter(
+        (branch) => !existing.includes(branch),
+      );
+      if (parents.length) await fetchOriginBranches(parents, gitOptions);
+      await checkStaging(context);
+    }
     progress.stop();
   } catch (error) {
     if (signal.aborted) return {};
@@ -365,8 +468,9 @@ const syncAll = async (mrs: MyMergeRequest[], context: RunContext): Promise<RunO
     return { fetchError: error as Error };
   }
 
-  const graph = buildSyncGraph(mrs);
-  const rebased = await rebaseAll(mrs, graph, remoteBranches, context);
+  const graphMrs = classified ? context.listed : mrs;
+  const graph = buildSyncGraph(graphMrs, classified ? context.targets : undefined);
+  const rebased = await rebaseAll(graphMrs, graph, remoteBranches, context);
 
   if (signal.aborted || rebased.length === 0) return {};
   if (!(await context.isLockHeld())) return { lockLost: true };
@@ -395,6 +499,13 @@ const rebaseAll = async (
   const schedule = (mr: MyMergeRequest): Promise<RebaseOutcome | undefined> => {
     const existing = tasks.get(mr.iid);
     if (existing) return existing;
+
+    const skipped = context.results.find((result) => result.iid === mr.iid);
+    if (skipped) {
+      const outcome = Promise.resolve({ done: { result: skipped } });
+      tasks.set(mr.iid, outcome);
+      return outcome;
+    }
 
     const parentIid = graph.parentOf.get(mr.iid);
     const parentMr = parentIid === undefined ? undefined : byIid.get(parentIid);
@@ -439,8 +550,14 @@ const done = (
   mr: MyMergeRequest,
   status: SyncStatus,
   reason?: string,
-  { hint, ...rest }: Omit<MergeRequestOutcome, 'result'> & { hint?: string } = {},
-): RebaseOutcome => ({ done: { result: { ...mr, status, reason, hint }, ...rest } });
+  {
+    hint,
+    approvalsUnknown,
+    ...rest
+  }: Omit<MergeRequestOutcome, 'result'> & { hint?: string; approvalsUnknown?: boolean } = {},
+): RebaseOutcome => ({
+  done: { result: { ...mr, status, reason, hint, approvalsUnknown }, ...rest },
+});
 
 const rebaseMergeRequest = async (
   mr: MyMergeRequest,
@@ -448,7 +565,10 @@ const rebaseMergeRequest = async (
   remoteBranches: Set<string>,
   context: RunContext,
 ): Promise<RebaseOutcome> => {
-  const { sourceBranch, targetBranch } = mr;
+  const { sourceBranch } = mr;
+  const targetBranch = context.targets.get(mr.iid) ?? mr.targetBranch;
+  const flow = context.project?.flow;
+  const classified = flow?.name === 'classified';
   const { signal, progress } = context;
   const gitOptions = { cancelSignal: signal, ...quietGit };
   const interrupted = () => done(mr, 'interrupted', 'Ctrl+C');
@@ -462,8 +582,32 @@ const rebaseMergeRequest = async (
     const upstream = `refs/remotes/origin/${targetBranch}`;
     const base = parent?.newSha ?? upstream;
 
-    if (await isAncestor(base, `refs/remotes/origin/${sourceBranch}`, gitOptions)) {
+    const ambiguous = context.ambiguous.get(mr.iid);
+    if (ambiguous) return done(mr, 'skipped', `ambiguous base: ${ambiguous.join(', ')}`);
+    if (classified) {
+      const { offending, foreign } = await inspectClassifiedCommits(
+        `origin/${sourceBranch}`,
+        flow,
+        gitOptions,
+      );
+      if (offending.length)
+        return done(mr, 'skipped', 'develop commits', {
+          hint: developCommitsHint(offending, flow),
+        });
+      if (foreign.length && !context.targets.has(mr.iid)) {
+        return done(mr, 'skipped', "contains others' commits - run axon sb in that branch");
+      }
+    }
+    const forkPoint = classified
+      ? await getForkPoint(upstream, `origin/${sourceBranch}`, gitOptions)
+      : undefined;
+    const fixups =
+      classified && (await hasFixupCommits(forkPoint!, `origin/${sourceBranch}`, gitOptions));
+    if (!fixups && (await isAncestor(base, `refs/remotes/origin/${sourceBranch}`, gitOptions))) {
       return done(mr, 'up-to-date');
+    }
+    if (classified && mr.labels.includes(flow.qaPassedLabel) && !context.includeQa) {
+      return done(mr, 'skipped', 'qa passed');
     }
 
     const originSha = await resolveCommitSha(`refs/remotes/origin/${sourceBranch}`, quietGit);
@@ -475,15 +619,46 @@ const rebaseMergeRequest = async (
       });
     }
 
-    const forkPoint = await getForkPoint(upstream, originSha, gitOptions);
-    const replayed = context.useReplay
-      ? await replayInBranch(mr, base, forkPoint, originSha, signal)
-      : undefined;
+    const fp = forkPoint ?? (await getForkPoint(upstream, originSha, gitOptions));
+    if (classified && !context.all) {
+      let approved = true;
+      let unknown = false;
+      try {
+        approved = await hasMrApprovals(mr, signal);
+      } catch {
+        if (signal.aborted) return interrupted();
+        unknown = true;
+      }
+      if (approved) {
+        const clean = context.useReplay
+          ? await replayInBranch(mr, base, fp, originSha, signal)
+          : undefined;
+        if (signal.aborted) return interrupted();
+        if (!context.useReplay)
+          return done(mr, 'skipped', 'approved - git replay unavailable', {
+            approvalsUnknown: unknown,
+            hint: 'Update git to 2.44 or later for the conflict check, or run axon sb in that branch.',
+          });
+        return clean
+          ? done(mr, 'skipped', 'approved - no conflict', { approvalsUnknown: unknown })
+          : done(mr, 'failed', 'conflict - rebase manually, approvals will reset', {
+              approvalsUnknown: unknown,
+              hint: `Run \`git checkout ${sourceBranch} && axon sb ${targetBranch}\` to resolve it. Approvals will reset.`,
+            });
+      }
+    }
+    const replayed =
+      context.useReplay && !fixups
+        ? await replayInBranch(mr, base, fp, originSha, signal)
+        : undefined;
 
     if (signal.aborted) return interrupted();
-    if (replayed) return { rebased: { mr, originSha, localSha, newSha: replayed } };
+    if (replayed) {
+      if (classified) await checkClassifiedPush(targetBranch, replayed, gitOptions);
+      return { rebased: { mr, originSha, localSha, newSha: replayed } };
+    }
 
-    const fallback = await rebaseInWorktree(mr, base, forkPoint, originSha, context);
+    const fallback = await rebaseInWorktree(mr, base, fp, originSha, context, Boolean(fixups));
 
     if ('conflict' in fallback) {
       return done(mr, 'failed', 'conflict', {
@@ -492,6 +667,7 @@ const rebaseMergeRequest = async (
       });
     }
 
+    if (classified) await checkClassifiedPush(targetBranch, fallback.newSha, gitOptions);
     return { rebased: { mr, originSha, localSha, newSha: fallback.newSha } };
   } catch (error) {
     if (signal.aborted) return interrupted();
@@ -525,6 +701,7 @@ const rebaseInWorktree = async (
   forkPoint: string,
   originSha: string,
   { signal, workspace, keepWorktrees }: RunContext,
+  autosquash = false,
 ): Promise<{ newSha: string } | { conflict: string }> => {
   const dir = path.join(workspace, mr.iid);
   const gitOptions = { cancelSignal: signal, ...quietGit };
@@ -532,7 +709,14 @@ const rebaseInWorktree = async (
   await addDetachedWorktree(dir, originSha, gitOptions);
 
   try {
-    return { newSha: await rebaseWorktreeOnto(dir, base, forkPoint, gitOptions) };
+    return {
+      newSha: await rebaseWorktreeOnto(
+        dir,
+        base,
+        forkPoint,
+        autosquash ? { ...gitOptions, autosquash } : gitOptions,
+      ),
+    };
   } catch (error) {
     if (signal.aborted) throw error;
 
@@ -769,7 +953,7 @@ const createProgress = () => {
       show(label);
 
       const { status, reason } = outcome.result;
-      const text = `${label} — ${status}${reason ? ` (${reason})` : ''}`;
+      const text = `${label} - ${status}${reason ? ` (${reason})` : ''}${outcome.result.approvalsUnknown ? ' (approvals unknown)' : ''}`;
       const current = spinner as Ora;
 
       if (status === 'synced') {
@@ -805,6 +989,7 @@ const printSummary = (
   mrs: MyMergeRequest[],
   results: SyncResult[],
   notRunReason?: string,
+  staging?: Set<string> | null,
 ): SyncResult[] => {
   const rows = mrs.map(
     (mr) =>
@@ -818,9 +1003,9 @@ const printSummary = (
   logger.info('Sync summary:');
   for (const status of STATUS_ORDER) {
     for (const row of rows.filter((candidate) => candidate.status === status)) {
-      const line = `  !${row.iid}: ${row.sourceBranch} -> ${row.targetBranch} — ${row.status}${
+      const line = `  !${row.iid}: ${row.sourceBranch} -> ${row.targetBranch} - ${row.status}${
         row.reason ? ` (${row.reason})` : ''
-      }`;
+      }${row.approvalsUnknown ? ' (approvals unknown)' : ''}${staging !== undefined ? ` | staging: ${staging === null ? 'unknown' : staging.has(row.iid) ? 'yes' : 'no'}` : ''}`;
 
       if (row.status === 'synced' || row.status === 'up-to-date') {
         logger.success(line);

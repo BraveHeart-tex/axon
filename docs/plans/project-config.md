@@ -319,28 +319,28 @@ Everything in this phase applies to `classified` only.
 
 ### 4a. CLI
 
-- [ ] `--all`: rebase approved MRs too.
-- [ ] `--include-qa`: also rebase MRs that carry `qaPassedLabel`.
-- [ ] Under gitflow, both flags are accepted with the note `has no effect in the gitflow flow`.
+- [x] `--all`: rebase approved MRs too.
+- [x] `--include-qa`: also rebase MRs that carry `qaPassedLabel`.
+- [x] Under gitflow, both flags are accepted with the note `has no effect in the gitflow flow`.
 
 ### 4b. Listing and filters
 
-- [ ] Add `labels` to `MyMergeRequest` from the existing list payload.
-- [ ] Replace `findSyncGuardrail` with a classified filter:
+- [x] Add `labels` to `MyMergeRequest` from the existing list payload.
+- [x] Replace `findSyncGuardrail` with a classified filter:
   - If the target is `<develop>`, skip with `skipped (targets develop - retarget to main)`.
   - Every other target is allowed.
-- [ ] If an MR has develop commits (the same check as 3b, run on `origin/<src>`), skip it with `skipped (develop commits)` and the 3b hint.
+- [x] If an MR has develop commits (the same check as 3b, run on `origin/<src>`), skip it with `skipped (develop commits)` and the 3b hint.
 
 ### 4c. Stacks by ancestry (`syncStack.ts`)
 
-- [ ] Get every head with one `git ls-remote --heads origin`, without fetching objects.
-- [ ] For each MR, find its ancestry parent among those heads, ignoring any head whose object isn't local.
+- [x] Get every head with one `git ls-remote --heads origin`, without fetching objects.
+- [x] For each MR, find its ancestry parent among those heads, ignoring any head whose object isn't local.
   - **The parent is another listed MR:** it's a stack edge. The child is rebased onto the parent's new head, and they're pushed atomically, as today.
   - **The parent is someone else's branch:** fetch that ref and rebase the child onto `origin/<their-branch>`. It's never pushed.
   - **Ambiguous:** skip with `skipped (ambiguous base: <branches>)`.
-- [ ] Foreign commits with no parent found: skip with `skipped (contains others' commits - run axon sb in that branch)`.
+- [x] Foreign commits with no parent found: skip with `skipped (contains others' commits - run axon sb in that branch)`.
   - This covers a teammate who force-pushed, so the old head isn't visible any more.
-- [ ] Keep the existing target-equals-source edges for gitflow.
+- [x] Keep the existing target-equals-source edges for gitflow.
 
 ### 4d. Policy (Q17b, Q19, Q24)
 
@@ -363,18 +363,18 @@ A parent that's skipped by the policy counts as "not rebased". Its children reba
 
 ### 4e. Tests
 
-- [ ] A develop-target MR is skipped.
-- [ ] An MR with develop commits is skipped.
-- [ ] A `qa::passed` MR is skipped, and rebased with `--include-qa`.
-- [ ] An approved MR with no conflict is skipped, an approved MR with a conflict fails with the hint, and `--all` rebases it.
-- [ ] A failed approvals call counts as approved.
-- [ ] An MR with fixup commits uses the worktree engine and pushes without any `*!` subject.
-- [ ] Ancestry stacks:
-  - [ ] My parent MR forms a stack.
-  - [ ] A teammate's parent branch rebases onto that branch.
-  - [ ] An ambiguous parent is skipped.
-  - [ ] Foreign commits with no parent are skipped.
-- [ ] Gitflow `--mine` behavior is unchanged.
+- [x] A develop-target MR is skipped.
+- [x] An MR with develop commits is skipped.
+- [x] A `qa::passed` MR is skipped, and rebased with `--include-qa`.
+- [x] An approved MR with no conflict is skipped, an approved MR with a conflict fails with the hint, and `--all` rebases it.
+- [x] A failed approvals call counts as approved.
+- [x] An MR with fixup commits uses the worktree engine and pushes without any `*!` subject.
+- [x] Ancestry stacks:
+  - [x] My parent MR forms a stack.
+  - [x] A teammate's parent branch rebases onto that branch.
+  - [x] An ambiguous parent is skipped.
+  - [x] Foreign commits with no parent are skipped.
+- [x] Gitflow `--mine` behavior is unchanged.
 
 **Done when:** all of the above pass, and the integration-test summary output has been reviewed by hand.
 

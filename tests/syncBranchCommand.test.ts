@@ -5,6 +5,8 @@ import { runSyncBranchFlow } from '@/domains/branch/syncBranch.flow.js';
 import { runSyncMineFlow } from '@/domains/branch/syncMine.flow.js';
 import { logger } from '@/infra/logger.js';
 
+import { projectContext } from './helpers/projectContext.js';
+
 vi.mock('@/domains/branch/syncBranch.flow.js', () => ({
   runSyncBranchFlow: vi.fn(),
 }));
@@ -89,3 +91,24 @@ describe('syncBranchCommand', () => {
     expect(mockedRunSyncMineFlow).not.toHaveBeenCalled();
   });
 });
+
+it('passes classified policy flags and context into mine', async () => {
+  const context = projectContext({ version: 1, flow: 'classified' });
+  await syncBranchCommand(undefined, { mine: true, all: true, includeQa: true }, context);
+  expect(mockedRunSyncMineFlow).toHaveBeenCalledWith(
+    { yes: false, concurrency: 4, keepWorktrees: false, all: true, includeQa: true },
+    context,
+  );
+});
+it.each([{ all: true }, { includeQa: true }])(
+  'rejects policy flags without mine: %o',
+  async (options) => {
+    process.exitCode = undefined;
+    await syncBranchCommand(undefined, options);
+    expect(logger.error).toHaveBeenCalledWith(
+      '--all and --include-qa only work together with --mine.',
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = undefined;
+  },
+);

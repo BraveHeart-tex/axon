@@ -1,7 +1,11 @@
 import { execa } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { checkGlabAuth, listMyOpenMergeRequests } from '@/domains/mr/glab.service.js';
+import {
+  checkGlabAuth,
+  hasMrApprovals,
+  listMyOpenMergeRequests,
+} from '@/domains/mr/glab.service.js';
 
 vi.mock('execa', () => ({
   execa: vi.fn(),
@@ -67,7 +71,9 @@ describe('listMyOpenMergeRequests', () => {
 
   it('parses MRs and maps snake_case fields to camelCase', async () => {
     glabPages({
-      '--assignee=@me': [[raw(12, { target_branch: 'main', source_project_id: 9 })]],
+      '--assignee=@me': [
+        [raw(12, { target_branch: 'main', source_project_id: 9, labels: ['qa::passed'] })],
+      ],
     });
 
     const result = await listMyOpenMergeRequests();
@@ -80,6 +86,7 @@ describe('listMyOpenMergeRequests', () => {
         sourceProjectId: 9,
         targetProjectId: 7,
         draft: false,
+        labels: ['qa::passed'],
       },
     ]);
   });
@@ -153,5 +160,31 @@ describe('listMyOpenMergeRequests', () => {
     await expect(listMyOpenMergeRequests()).rejects.toThrow(
       /GitLab origin remote.*glab auth login[\s\S]*none of the git remotes point to a GitLab host/,
     );
+  });
+});
+
+describe('hasMrApprovals', () => {
+  beforeEach(() => vi.resetAllMocks());
+  it.each([[[]], [[{}]]])('reads approval data %j from the target project', async (approvedBy) => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({ approved_by: approvedBy }),
+    } as never);
+    const signal = new AbortController().signal;
+    const mr = { iid: '12', targetProjectId: 7 } as Parameters<typeof hasMrApprovals>[0];
+    expect(await hasMrApprovals(mr, signal)).toBe(approvedBy.length > 0);
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'glab',
+      ['api', 'projects/7/merge_requests/12/approvals'],
+      { cancelSignal: signal },
+    );
+  });
+  it('rejects malformed approval data rather than assuming no approvals', async () => {
+    mockedExeca.mockResolvedValueOnce({ stdout: '{}' } as never);
+    await expect(
+      hasMrApprovals(
+        { iid: '1', targetProjectId: 7 } as Parameters<typeof hasMrApprovals>[0],
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow('Invalid approvals response');
   });
 });

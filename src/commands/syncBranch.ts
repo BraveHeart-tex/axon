@@ -5,6 +5,8 @@ import { logger } from '@/infra/logger.js';
 
 type SyncBranchOptions = {
   mine?: boolean;
+  all?: boolean;
+  includeQa?: boolean;
   yes?: boolean;
   concurrency?: string;
   keepWorktrees?: boolean;
@@ -30,12 +32,22 @@ export const syncBranchCommand = async (
       return;
     }
 
-    await runSyncMineFlow({
+    const mineOptions = {
       yes: Boolean(options.yes),
       concurrency:
         options.concurrency === undefined ? DEFAULT_CONCURRENCY : Number(options.concurrency),
       keepWorktrees: Boolean(options.keepWorktrees),
-    });
+      ...(options.all ? { all: true } : {}),
+      ...(options.includeQa ? { includeQa: true } : {}),
+    };
+    if (context) await runSyncMineFlow(mineOptions, context);
+    else await runSyncMineFlow(mineOptions);
+    return;
+  }
+
+  if (options.all || options.includeQa) {
+    logger.error('--all and --include-qa only work together with --mine.');
+    process.exitCode = 1;
     return;
   }
 
