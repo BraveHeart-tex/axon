@@ -1,5 +1,6 @@
 import { runSyncBranchFlow } from '@/domains/branch/syncBranch.flow.js';
 import { runSyncMineFlow } from '@/domains/branch/syncMine.flow.js';
+import type { ProjectContext } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
 
 type SyncBranchOptions = {
@@ -11,7 +12,11 @@ type SyncBranchOptions = {
 
 const DEFAULT_CONCURRENCY = 4;
 
-export const syncBranchCommand = async (target?: string, options: SyncBranchOptions = {}) => {
+export const syncBranchCommand = async (
+  target?: string,
+  options: SyncBranchOptions = {},
+  context?: ProjectContext,
+) => {
   if (options.mine) {
     if (target) {
       logger.error('Cannot pass a target branch together with --mine.');
@@ -40,5 +45,6 @@ export const syncBranchCommand = async (target?: string, options: SyncBranchOpti
     return;
   }
 
-  await runSyncBranchFlow(target);
+  if (context) await runSyncBranchFlow(target, context);
+  else await runSyncBranchFlow(target);
 };

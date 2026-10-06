@@ -296,9 +296,37 @@ export const rebaseOntoRemoteBranch = async (
   });
 };
 
-export const rebaseOntoRemoteBranchInteractive = async (branchName: string) => {
+export const autosquashOntoRemoteBranch = async (
+  branchName: string,
+  { cancelSignal }: GitCallOptions = {},
+) => {
+  await execa(
+    'git',
+    [
+      '-c',
+      'sequence.editor=:',
+      'rebase',
+      '-i',
+      '--autosquash',
+      '--no-rebase-merges',
+      '--fork-point',
+      `origin/${branchName}`,
+    ],
+    {
+      stdio: 'inherit',
+      env: { GIT_EDITOR: ':' },
+      cancelSignal,
+    },
+  );
+};
+
+export const rebaseOntoRemoteBranchInteractive = async (
+  branchName: string,
+  { cancelSignal }: GitCallOptions = {},
+) => {
   await execa('git', ['rebase', '--fork-point', '--interactive', `origin/${branchName}`], {
     stdio: 'inherit',
+    cancelSignal,
   });
 };
 

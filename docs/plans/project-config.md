@@ -264,46 +264,46 @@ These were tested in a scratch repo:
 
 ### 3a. Target
 
-- [ ] **With an explicit argument:** use it. If it's `<develop>`, refuse and exit 1 with `Classified MRs never sync onto develop. Use axon sb (onto main) or a teammate's branch.`
-- [ ] **Auto-detect:**
+- [x] **With an explicit argument:** use it. If it's `<develop>`, refuse and exit 1 with `Classified MRs never sync onto develop. Use axon sb (onto main) or a teammate's branch.`
+- [x] **Auto-detect:**
   1. If the current branch has an ancestry parent among `refs/remotes/origin/*`, offer it as the default, with the reason `contains <branch> head`.
      - Get the candidates with `git for-each-ref --merged HEAD --no-merged origin/<main> refs/remotes/origin`, excluding `<main>`, `<develop>` and `origin/<current>`.
      - The fetch has already run with `--prune`, so these refs are current.
      - If the ancestry is ambiguous, offer `<main>` and warn which branches are in the history.
   2. Otherwise offer `<main>`.
-- [ ] Best effort: when `glab` is authenticated and an MR exists for the branch, look up its target with `glab mr view <branch> -F json`.
+- [x] Best effort: when `glab` is authenticated and an MR exists for the branch, look up its target with `glab mr view <branch> -F json`.
   - If the target is `<develop>`, refuse with `Retarget !<iid> to main in GitLab`.
   - If glab isn't available, skip this check silently.
-- [ ] Remove the release and feature-onto-main confirms under classified. Keep `findSyncGuardrail` for gitflow only.
+- [x] Remove the release and feature-onto-main confirms under classified. Keep `findSyncGuardrail` for gitflow only.
 
 ### 3b. Pre-rebase checks (`src/domains/branch/classifiedGuards.ts`)
 
-- [ ] **Develop commits:** list `origin/<main>..HEAD` with the `Staging-MR` trailer. Also intersect it with `origin/<main>..origin/<develop>`.
+- [x] **Develop commits:** list `origin/<main>..HEAD` with the `Staging-MR` trailer. Also intersect it with `origin/<main>..origin/<develop>`.
   - If either finds a commit, refuse and exit 1. Print the commits and the fix:
     1. `git rebase -i origin/main`
     2. Drop the listed commits.
     3. `axon sb`
-- [ ] **Foreign commits** when the target is `<main>`: warn and confirm (`N commits by other authors will be rebased onto main - is this branch based on a teammate's?`).
+- [x] **Foreign commits** when the target is `<main>`: warn and confirm (`N commits by other authors will be rebased onto main - is this branch based on a teammate's?`).
   - If the user declines, exit 0.
 
 ### 3c. Rebase
 
-- [ ] Always autosquash: `GIT_EDITOR=: git -c sequence.editor=: rebase -i --autosquash --fork-point origin/<target>`.
+- [x] Always autosquash: `GIT_EDITOR=: git -c sequence.editor=: rebase -i --autosquash --fork-point origin/<target>`.
   - Keep the existing fallback to an interactive rebase when it fails.
-- [ ] Merge commits are dropped by the rebase, since axon never uses `--rebase-merges`. Add a test that proves it.
-- [ ] After the rebase, check that no fixup commit and no merge commit is left in `origin/<target>..HEAD` before pushing.
+- [x] Merge commits are dropped by the rebase, since axon never uses `--rebase-merges`. Add a test that proves it.
+- [x] After the rebase, check that no fixup commit and no merge commit is left in `origin/<target>..HEAD` before pushing.
   - If one is, stop without pushing and explain.
-- [ ] The push is unchanged, using the explicit lease from the hardening plan.
+- [x] The push is unchanged, using the explicit lease from the hardening plan.
 
 ### 3d. Tests (integration, temp repos)
 
-- [ ] An explicit `develop` target is refused.
-- [ ] An MR into `develop` is refused, with glab mocked.
-- [ ] A branch carrying a commit with the `Staging-MR` trailer is refused, and so is a branch carrying a commit reachable from `origin/develop`.
-- [ ] Fixup, squash and amend commits are folded in, and the result is pushed.
-- [ ] A branch built on a teammate's branch auto-detects that branch.
-- [ ] A teammate's commit rebased onto `main` needs a confirm.
-- [ ] A merge commit is gone after `sb`.
+- [x] An explicit `develop` target is refused.
+- [x] An MR into `develop` is refused, with glab mocked.
+- [x] A branch carrying a commit with the `Staging-MR` trailer is refused, and so is a branch carrying a commit reachable from `origin/develop`.
+- [x] Fixup, squash and amend commits are folded in, and the result is pushed.
+- [x] A branch built on a teammate's branch auto-detects that branch.
+- [x] A teammate's commit rebased onto `main` needs a confirm.
+- [x] A merge commit is gone after `sb`.
 
 **Done when:** every scenario above passes, and the gitflow `sb` tests are unchanged.
 

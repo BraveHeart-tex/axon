@@ -111,7 +111,7 @@ program
       'With --mine, syncs every open MR authored by or assigned to you instead, ' +
       'without touching your worktree and with git hooks skipped.',
   )
-  .action(syncBranchCommand);
+  .action((target, options) => syncBranchCommand(target, options, getProjectContext()));
 
 program.parse(process.argv);
 
