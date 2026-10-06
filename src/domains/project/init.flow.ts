@@ -154,7 +154,7 @@ const buildConfig = async (
   existing: ProjectConfig | null,
   suggested: FlowName,
 ): Promise<ProjectConfigInput> => {
-  const global = readConfig();
+  const global = readConfig({ createIfMissing: false });
 
   const flow = await promptFlow(existing?.flow ?? suggested, suggested);
   const branches = await promptBranches(existing, flow);

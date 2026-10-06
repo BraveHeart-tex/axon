@@ -117,6 +117,16 @@ describe('parseProjectConfig', () => {
       `${FILE}: jira.inProgressStatus: a non-empty string, got " "`,
     ],
     [
+      'an invalid Jira URL',
+      { version: 1, flow: 'classified', jira: { cloudUrl: 'not-a-url' } },
+      `${FILE}: jira.cloudUrl: a Jira Cloud URL, got "not-a-url"`,
+    ],
+    [
+      'an invalid Jira email',
+      { version: 1, flow: 'classified', jira: { email: 'not-an-email' } },
+      `${FILE}: jira.email: a valid email address, got "not-an-email"`,
+    ],
+    [
       'an unknown key',
       { version: 1, flow: 'gitflow', jiraKeys: ['PRD'] },
       `${FILE}: jiraKeys: no such setting, got an array ["PRD"]`,

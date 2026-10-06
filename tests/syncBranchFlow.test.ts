@@ -136,7 +136,9 @@ describe('runSyncBranchFlow', () => {
 
     expect(logger.warn).toHaveBeenCalledWith('Rebase onto origin/develop failed.');
     expect(mockedAbortRebase).toHaveBeenCalled();
-    expect(mockedRebaseOntoRemoteBranchInteractive).toHaveBeenCalledWith('develop');
+    expect(mockedRebaseOntoRemoteBranchInteractive).toHaveBeenCalledWith('develop', {
+      cancelSignal: expect.any(AbortSignal),
+    });
     expect(mockedPushHeadWithLease).toHaveBeenCalled();
     expect(process.exitCode).toBeUndefined();
   });
@@ -185,7 +187,9 @@ describe('runSyncBranchFlow', () => {
     await runSyncBranchFlow('develop');
 
     expect(mockedCountCommitsMissingLocally).not.toHaveBeenCalled();
-    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/ORD-1325-checkout', '');
+    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/ORD-1325-checkout', '', {
+      cancelSignal: expect.any(AbortSignal),
+    });
   });
 
   it('pushes with lease only after a successful rebase', async () => {
@@ -194,8 +198,12 @@ describe('runSyncBranchFlow', () => {
     expect(mockedResolveCommitSha).toHaveBeenCalledWith(
       'refs/remotes/origin/feat/ORD-1325-checkout',
     );
-    expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledWith('develop');
-    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/ORD-1325-checkout', 'remote-sha');
+    expect(mockedRebaseOntoRemoteBranch).toHaveBeenCalledWith('develop', {
+      cancelSignal: expect.any(AbortSignal),
+    });
+    expect(mockedPushHeadWithLease).toHaveBeenCalledWith('feat/ORD-1325-checkout', 'remote-sha', {
+      cancelSignal: expect.any(AbortSignal),
+    });
     expect(mockedRebaseOntoRemoteBranch.mock.invocationCallOrder[0]).toBeLessThan(
       mockedPushHeadWithLease.mock.invocationCallOrder[0]!,
     );

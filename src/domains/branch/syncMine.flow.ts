@@ -700,7 +700,7 @@ const rebaseInWorktree = async (
   base: string,
   forkPoint: string,
   originSha: string,
-  { signal, workspace, keepWorktrees }: RunContext,
+  { signal, workspace, keepWorktrees, project }: RunContext,
   autosquash = false,
 ): Promise<{ newSha: string } | { conflict: string }> => {
   const dir = path.join(workspace, mr.iid);
@@ -710,12 +710,11 @@ const rebaseInWorktree = async (
 
   try {
     return {
-      newSha: await rebaseWorktreeOnto(
-        dir,
-        base,
-        forkPoint,
-        autosquash ? { ...gitOptions, autosquash } : gitOptions,
-      ),
+      newSha: await rebaseWorktreeOnto(dir, base, forkPoint, {
+        ...gitOptions,
+        ...(autosquash ? { autosquash } : {}),
+        ...(project?.flow.name === 'classified' ? { noRebaseMerges: true } : {}),
+      }),
     };
   } catch (error) {
     if (signal.aborted) throw error;

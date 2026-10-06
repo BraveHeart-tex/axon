@@ -708,7 +708,12 @@ export const rebaseWorktreeOnto = async (
   dir: string,
   base: string,
   upstream: string,
-  { cancelSignal, skipHooks, autosquash }: GitCallOptions & { autosquash?: boolean } = {},
+  {
+    cancelSignal,
+    skipHooks,
+    autosquash,
+    noRebaseMerges,
+  }: GitCallOptions & { autosquash?: boolean; noRebaseMerges?: boolean } = {},
 ) => {
   await execa(
     'git',
@@ -719,6 +724,7 @@ export const rebaseWorktreeOnto = async (
         ...(autosquash ? ['-c', 'sequence.editor=:'] : []),
         'rebase',
         ...(autosquash ? ['-i', '--autosquash'] : []),
+        ...(noRebaseMerges ? ['--no-rebase-merges'] : []),
         '--onto',
         base,
         upstream,

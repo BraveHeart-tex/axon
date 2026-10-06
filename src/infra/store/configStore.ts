@@ -40,8 +40,8 @@ const ensureConfigFile = () => {
   }
 };
 
-export const readConfig = (): AxonConfig => {
-  ensureConfigFile();
+export const readConfig = ({ createIfMissing = true } = {}): AxonConfig => {
+  if (createIfMissing) ensureConfigFile();
   const configPath = getConfigPath();
 
   try {

@@ -117,6 +117,8 @@ describe('runInitFlow', () => {
     const file = path.join(env.configDir, 'projects', CLASSIFIED_FILE);
     const edited = JSON.parse(fs.readFileSync(file, 'utf-8'));
     edited.jira.inProgressStatus = 'Doing';
+    edited.jira.cloudUrl = 'https://project.atlassian.net';
+    edited.jira.email = 'project@example.com';
     edited.aiModel = 'openai/gpt-oss-20b';
     fs.writeFileSync(file, JSON.stringify(edited));
 
@@ -139,7 +141,13 @@ describe('runInitFlow', () => {
       flow: 'classified',
       classified: { mainBranch: 'trunk', developBranch: 'develop', qaPassedLabel: 'qa::passed' },
       branchTemplate: '{key}-{slug}',
-      jira: { projectKeys: ['PRD', 'FE'], inProgressStatus: 'Doing', jql: 'project = PRD' },
+      jira: {
+        projectKeys: ['PRD', 'FE'],
+        inProgressStatus: 'Doing',
+        cloudUrl: 'https://project.atlassian.net',
+        email: 'project@example.com',
+        jql: 'project = PRD',
+      },
       mode: 'jira',
       aiModel: 'openai/gpt-oss-20b',
     });
@@ -153,7 +161,7 @@ describe('runInitFlow', () => {
     });
 
     expect(await runInitFlow()).toBeNull();
-    expect(fs.existsSync(path.join(env.configDir, 'projects'))).toBe(false);
+    expect(fs.existsSync(env.configDir)).toBe(false);
   });
 
   it('validates answers with the schema rules', async () => {

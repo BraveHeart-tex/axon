@@ -142,12 +142,10 @@ const performRebaseAndPush = async (
   classified: boolean,
 ) => {
   let rebase: Promise<void> | undefined;
-  const cancellation = classified
-    ? registerCancellation(async () => {
-        await rebase?.catch(() => undefined);
-        await abortRebase();
-      })
-    : undefined;
+  const cancellation = registerCancellation(async () => {
+    await rebase?.catch(() => undefined);
+    await abortRebase();
+  });
   try {
     if (!(await remoteTrackingBranchExists(targetBranch))) {
       logger.warn(`origin/${targetBranch} not found - rebase may fail.`);
@@ -156,12 +154,12 @@ const performRebaseAndPush = async (
     logger.info(`Rebasing ${c.bold(currentBranch)} onto ${c.bold(`origin/${targetBranch}`)}`);
 
     try {
-      if (classified) {
-        rebase = autosquashOntoRemoteBranch(targetBranch, { cancelSignal: cancellation?.signal });
-        await rebase;
-      } else await rebaseOntoRemoteBranch(targetBranch);
+      rebase = classified
+        ? autosquashOntoRemoteBranch(targetBranch, { cancelSignal: cancellation.signal })
+        : rebaseOntoRemoteBranch(targetBranch, { cancelSignal: cancellation.signal });
+      await rebase;
     } catch (error) {
-      if (cancellation?.signal.aborted) throw error;
+      if (cancellation.signal.aborted) throw error;
       logger.warn(`Rebase onto origin/${targetBranch} failed.`);
 
       let useInteractive: boolean;
@@ -182,23 +180,19 @@ const performRebaseAndPush = async (
       }
 
       await abortRebase();
-      if (classified) {
-        rebase = rebaseOntoRemoteBranchInteractive(targetBranch, {
-          cancelSignal: cancellation?.signal,
-        });
-        await rebase;
-      } else await rebaseOntoRemoteBranchInteractive(targetBranch);
+      rebase = rebaseOntoRemoteBranchInteractive(targetBranch, {
+        cancelSignal: cancellation.signal,
+      });
+      await rebase;
     }
 
     if (classified) await checkClassifiedPush(targetBranch);
 
     logger.info('Pushing with --force-with-lease');
-    if (classified)
-      await pushHeadWithLease(currentBranch, remoteSha, { cancelSignal: cancellation?.signal });
-    else await pushHeadWithLease(currentBranch, remoteSha);
+    await pushHeadWithLease(currentBranch, remoteSha, { cancelSignal: cancellation.signal });
 
     logger.success(`Synced ${currentBranch} with origin/${targetBranch}.`);
   } finally {
-    cancellation?.unregister();
+    cancellation.unregister();
   }
 };

@@ -39,13 +39,6 @@ yarn run build
 yarn link
 ```
 
-#Under classified, `--mine` skips QA-passed MRs (by default, `qa::passed`) and
-checks approved MRs for conflicts without rebasing them. `--all` allows rebasing
-approved MRs; `--include-qa` allows rebasing QA-passed MRs. Use both to include
-MRs with both protections. Pushing rewritten commits resets approvals. Develop
-targets, develop commits and unsafe ancestry are skipped with a reason. Staging
-presence is informational. Under gitflow, `--all` and `--include-qa` have no effect.
-
 ## Development Mode
 
 Run in development mode without building:
@@ -102,6 +95,9 @@ stays private in `~/.axon/projects/<slug>.json` (or under
 Without project config, Axon keeps the default gitflow behavior. Branch names
 such as main and develop above follow your configured names. Project settings
 override global defaults; `AXON_AI_MODEL` overrides the saved model.
+
+Set `jira.cloudUrl` and `jira.email` in the project file to override the global
+Jira site and account. Omitted values use the global settings.
 
 ## Usage
 

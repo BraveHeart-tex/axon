@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { AI_MODELS } from '@/domains/ai/ai.constants.js';
+import { JIRA_CLOUD_URL_REGEX } from '@/domains/jira/jira.constants.js';
 import { CLI_MODES } from '@/domains/mode/mode.constants.js';
 
 import {
@@ -41,6 +42,8 @@ const jiraSchema = z.strictObject({
   inProgressStatus: nonEmptyString.optional(),
   statusOrder: z.array(nonEmptyString).optional(),
   jql: z.string().optional(),
+  cloudUrl: z.string().regex(JIRA_CLOUD_URL_REGEX, { error: 'a Jira Cloud URL' }).optional(),
+  email: z.email({ error: 'a valid email address' }).optional(),
 });
 
 const baseShape = {

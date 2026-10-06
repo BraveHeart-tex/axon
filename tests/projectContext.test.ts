@@ -254,6 +254,26 @@ describe('getProjectContext', () => {
 });
 
 describe('Jira getters', () => {
+  it('resolves project site and account from disk before calling getters', async () => {
+    const env = await createProjectRepo({ origin: 'git@gitlab.com:acme/app.git' });
+    try {
+      writeConfig(GLOBAL);
+      writeProjectFile(env.configDir, 'gitlab.com__acme__app', {
+        version: 1,
+        flow: 'classified',
+        jira: { cloudUrl: 'https://project.atlassian.net', email: 'project@acme.com' },
+      });
+      const { jira } = await resolveProjectContext();
+
+      expect(await getJiraCloudUrlOrPrompt(jira)).toBe('https://project.atlassian.net');
+      expect(await getJiraEmailOrPrompt(jira)).toBe('project@acme.com');
+      expect(await getJiraJqlOrPrompt(jira)).toBe(GLOBAL.jiraJql);
+      expect(readConfig()).toEqual(GLOBAL);
+    } finally {
+      await env.cleanup();
+    }
+  });
+
   it('use the passed context before global config', async () => {
     const env = await createProjectRepo();
     try {

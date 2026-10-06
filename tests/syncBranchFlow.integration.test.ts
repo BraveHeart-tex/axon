@@ -1,9 +1,16 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
+import { confirm } from '@inquirer/prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { runSyncBranchFlow } from '@/domains/branch/syncBranch.flow.js';
+import { createInterruptHandler } from '@/infra/cancellation.js';
 import { logger } from '@/infra/logger.js';
 
 import { commitFile, createTestRepos, git, TestRepos } from './helpers/gitRepos.js';
+
+vi.mock('@inquirer/prompts', () => ({ confirm: vi.fn(), input: vi.fn() }));
 
 let repos: TestRepos;
 
@@ -82,5 +89,30 @@ describe('runSyncBranchFlow against real repos', () => {
     expect(pushed).toBe(await git(repos.user, 'rev-parse', 'HEAD'));
     expect(await isAncestor(developSha, pushed)).toBe(true);
     expect(process.exitCode).toBeUndefined();
+  });
+
+  it('aborts a Gitflow rebase when interrupted at the conflict prompt', async () => {
+    await git(repos.user, 'checkout', '-q', '-b', 'feat/conflict', 'develop');
+    const before = await commitFile(repos.user, 'README.md', 'feature\n');
+    await git(repos.user, 'push', '-q', 'origin', 'feat/conflict');
+    await commitFile(repos.other, 'README.md', 'upstream\n');
+    await git(repos.other, 'push', '-q', 'origin', 'develop');
+    const exit = vi.fn();
+    const interrupt = createInterruptHandler({ exit, stdout: vi.fn(), stderr: vi.fn() });
+    vi.mocked(confirm).mockImplementationOnce(async () => {
+      expect(existsSync(path.join(repos.user, '.git', 'rebase-merge'))).toBe(true);
+      await interrupt();
+      throw Object.assign(new Error('cancelled'), { name: 'ExitPromptError' });
+    });
+
+    await runSyncBranchFlow('develop');
+
+    expect(exit).toHaveBeenCalledWith(130);
+    expect(await git(repos.user, 'rev-parse', 'HEAD')).toBe(before);
+    expect(await git(repos.user, 'branch', '--show-current')).toBe('feat/conflict');
+    expect(await originSha('feat/conflict')).toBe(before);
+    expect(existsSync(path.join(repos.user, '.git', 'rebase-merge'))).toBe(false);
+    expect(existsSync(path.join(repos.user, '.git', 'rebase-apply'))).toBe(false);
+    expect(await git(repos.user, 'status', '--porcelain')).toBe('');
   });
 });

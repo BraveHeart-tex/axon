@@ -284,6 +284,38 @@ describe('Classified mine policy', () => {
     await clean();
   });
 
+  it.each([false, true])(
+    'removes merges despite rebase.rebaseMerges in worktrees (fixups=%s)',
+    async (fixups) => {
+      await branch('feat/a');
+      await git(repos.user, 'checkout', '-q', '-b', 'side', 'production');
+      await commitFile(repos.user, 'side.txt', 'side\n');
+      await git(repos.user, 'checkout', '-q', 'feat/a');
+      await git(repos.user, 'merge', '--no-ff', '-m', 'merge side', 'side');
+      if (fixups) {
+        await commitFile(repos.user, 'extra.txt', 'extra\n');
+        await git(repos.user, 'commit', '--amend', '-m', 'fixup! edit feat-a.txt');
+      }
+      await git(repos.user, 'push', '-q', 'origin', 'feat/a');
+      await git(repos.user, 'checkout', '-q', 'production');
+      await git(repos.user, 'config', 'rebase.rebaseMerges', 'true');
+      const main = await advance();
+      vi.spyOn(gitService, 'replayOnto').mockResolvedValueOnce(undefined);
+
+      await sync([mr('1', 'feat/a')]);
+
+      expect(process.exitCode).toBeUndefined();
+      await contains(main, await head('feat/a'));
+      expect(await git(repos.origin, 'rev-list', '--merges', 'production..feat/a')).toBe('');
+      expect(await git(repos.origin, 'show', 'feat/a:side.txt')).toBe('side');
+      expect(await git(repos.origin, 'log', '--format=%s', 'production..feat/a')).not.toMatch(
+        /^(fixup!|squash!|amend!) /m,
+      );
+      if (fixups) expect(await git(repos.origin, 'show', 'feat/a:extra.txt')).toBe('extra');
+      await clean();
+    },
+  );
+
   it('reports staging for runs with only filtered MRs', async () => {
     await branch('feat/a');
     await git(repos.user, 'push', '-q', 'origin', 'feat/a:refs/staging/1');
