@@ -382,8 +382,8 @@ A parent that's skipped by the policy counts as "not rebased". Its children reba
 
 **Goal:** QA and review fixes go into the commit they belong to, and pushing works without an upstream.
 
-- [ ] Classified, when `origin/<main>..HEAD` has non-fixup commits: the first prompt is `New commit` or `Fix up an existing commit`.
-- [ ] **Fix up:**
+- [x] Classified, when `origin/<main>..HEAD` has non-fixup commits: the first prompt is `New commit` or `Fix up an existing commit`.
+- [x] **Fix up:**
   1. Pick a commit from `origin/<main>..HEAD`. Fixup commits aren't listed.
   2. Run `git commit --fixup=<sha>`. There's no AI call.
   3. Ask `Squash into <subject> and push now?`.
@@ -391,20 +391,20 @@ A parent that's skipped by the policy counts as "not rebased". Its children reba
        - On failure, run `rebase --abort`, keep the fixup commit, and print `run axon sb to squash and rebase`.
        - Then push.
      - **No:** stop. The next `axon sb` folds the fixup in, per Q16.
-- [ ] **Push, for both flows:** replace the bare `git push` with the explicit lease push from `sb`, `origin HEAD:refs/heads/<b>`.
+- [x] **Push, for both flows:** replace the bare `git push` with the explicit lease push from `sb`, `origin HEAD:refs/heads/<b>`.
   - First check that origin isn't ahead, as in `sb` 1b. If it is, refuse with the pull hint.
   - A branch that was never pushed gets an empty-SHA lease.
-- [ ] **Tests:**
-  - [ ] The fixup prompt appears only under classified, and only when there are commits.
-  - [ ] Fix up, squash and push leaves a single commit with an unchanged base.
-  - [ ] A squash failure keeps the fixup commit.
-  - [ ] Push without an upstream works.
-  - [ ] Push when origin is ahead is refused.
+- [x] **Tests:**
+  - [x] The fixup prompt appears only under classified, and only when there are commits.
+  - [x] Fix up, squash and push leaves a single commit with an unchanged base.
+  - [x] A squash failure keeps the fixup commit.
+  - [x] Push without an upstream works.
+  - [x] Push when origin is ahead is refused.
 
 **Done when:**
 
-- [ ] All of the above pass.
-- [ ] The README documents `init`, the flows, `--all` and `--include-qa`.
+- [x] All of the above pass.
+- [x] The README documents `init`, the flows, `--all` and `--include-qa`.
 
 ---
 

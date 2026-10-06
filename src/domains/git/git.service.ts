@@ -355,10 +355,7 @@ export const rebaseOntoRemoteBranch = async (
   });
 };
 
-export const autosquashOntoRemoteBranch = async (
-  branchName: string,
-  { cancelSignal }: GitCallOptions = {},
-) => {
+const autosquash = async (upstream: string, forkPoint: boolean, options: GitCallOptions) => {
   await execa(
     'git',
     [
@@ -368,16 +365,18 @@ export const autosquashOntoRemoteBranch = async (
       '-i',
       '--autosquash',
       '--no-rebase-merges',
-      '--fork-point',
-      `origin/${branchName}`,
+      forkPoint ? '--fork-point' : '--no-fork-point',
+      upstream,
     ],
-    {
-      stdio: 'inherit',
-      env: { GIT_EDITOR: ':' },
-      cancelSignal,
-    },
+    { stdio: 'inherit', env: { GIT_EDITOR: ':' }, cancelSignal: options.cancelSignal },
   );
 };
+
+export const autosquashOntoRemoteBranch = (branchName: string, options: GitCallOptions = {}) =>
+  autosquash(`origin/${branchName}`, true, options);
+
+export const autosquashInPlace = (base: string, options: GitCallOptions = {}) =>
+  autosquash(base, false, options);
 
 export const rebaseOntoRemoteBranchInteractive = async (
   branchName: string,
@@ -519,8 +518,46 @@ export const commitWithMessage = async (message: string): Promise<void> => {
   await execa('git', ['commit', '-m', message], { stdio: 'inherit' });
 };
 
-export const pushCurrentBranch = async (): Promise<void> => {
-  await execa('git', ['push'], { stdio: 'inherit' });
+export const commitFixup = async (sha: string): Promise<void> => {
+  await execa('git', ['commit', `--fixup=${sha}`], { stdio: 'inherit' });
+};
+
+export const listFixupTargets = async (mainBranch: string) => {
+  if (!(await remoteTrackingBranchExists(mainBranch))) {
+    throw new Error(
+      `origin/${mainBranch} not found. Check the configured main branch and run git fetch origin.`,
+    );
+  }
+  const { stdout } = await execa('git', ['log', '--format=%H%x00%s', `origin/${mainBranch}..HEAD`]);
+  return stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [sha, subject] = line.split('\0');
+      return { sha, subject };
+    })
+    .filter(({ subject }) => !/^(fixup!|squash!|amend!) /.test(subject));
+};
+
+export const getCurrentBranchPushLease = async (options: GitCallOptions = {}) => {
+  const branch = await getCurrentBranchNameForWorktree();
+  if (!branch) throw new Error('Not on a branch. Check out a branch before pushing.');
+  await fetchOriginPrune(options);
+  const expectedSha = await resolveCommitSha(`refs/remotes/origin/${branch}`);
+  if (expectedSha) {
+    const missing = await countCommitsMissingLocally(branch);
+    if (missing > 0) {
+      throw new Error(
+        `origin/${branch} has ${missing} commit(s) you don't have locally. Run git pull --rebase first.`,
+      );
+    }
+  }
+  return { branch, expectedSha };
+};
+
+export const pushCurrentBranch = async (options: GitCallOptions = {}): Promise<void> => {
+  const { branch, expectedSha } = await getCurrentBranchPushLease(options);
+  await pushHeadWithLease(branch, expectedSha, options);
 };
 
 // An empty expectedSha leases "the branch must not exist on the remote yet".

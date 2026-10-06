@@ -6,18 +6,21 @@ import { resolveAiModel } from '@/domains/ai/ai.config.js';
 import { getCommitMessagePrompt } from '@/domains/ai/ai.prompts.js';
 import { generateAiResponse } from '@/domains/ai/ai.service.js';
 import { normalizeGeneratedCommitMessage } from '@/domains/ai/commit/commitMessageFormatter.js';
+import { offerCommitFixup } from '@/domains/ai/commit/flows/commitFixup.flow.js';
 import { ensureAiApiKey } from '@/domains/ai/commit/flows/ensureAiApiKey.flow.js';
 import { resolveCommitContext } from '@/domains/ai/commit/flows/resolveCommitContext.flow.js';
 import { commitWithMessage, pushCurrentBranch } from '@/domains/git/git.service.js';
 import type { ProjectContext } from '@/domains/project/project.types.js';
+import { registerCancellation } from '@/infra/cancellation.js';
 import { logger } from '@/infra/logger.js';
 import { editMessageInline } from '@/shared/editMessageInline.js';
 export const runCommitAiFlow = async (projectContext: ProjectContext) => {
   try {
+    if (await offerCommitFixup(projectContext)) return;
+
     const apiKey = await ensureAiApiKey();
     const context = await resolveCommitContext(projectContext);
 
-    // State for making regenerate smarter
     const rejectedMessages: string[] = [];
     let userFeedback: string | undefined = undefined;
 
@@ -72,7 +75,7 @@ export const runCommitAiFlow = async (projectContext: ProjectContext) => {
         });
 
         userFeedback = hint.trim() || undefined;
-        console.log(''); // Visual padding
+        console.log('');
         continue;
       }
 
@@ -89,7 +92,6 @@ export const runCommitAiFlow = async (projectContext: ProjectContext) => {
         message = edited;
       }
 
-      // commit
       await commitWithMessage(message);
       logger.info(`\n✔ Committed: ${message}\n`, false);
 
@@ -100,19 +102,24 @@ export const runCommitAiFlow = async (projectContext: ProjectContext) => {
       });
 
       if (shouldPush) {
-        const pushSpinner = ora('Pushing...').start();
+        logger.info('Checking origin and pushing with --force-with-lease');
+        const cancellation = registerCancellation(async () => undefined);
         try {
-          await pushCurrentBranch();
-          pushSpinner.succeed('Pushed.');
-        } catch (error) {
-          pushSpinner.fail('Push failed.');
-          throw error;
+          await pushCurrentBranch({ cancelSignal: cancellation.signal });
+          logger.success('Pushed.');
+        } finally {
+          cancellation.unregister();
         }
       }
 
       return;
     }
   } catch (error) {
+    if ((error as Error).name === 'ExitPromptError') {
+      logger.info('Commit canceled.');
+      return;
+    }
+    process.exitCode = 1;
     logger.error(`Commit AI failed: ${error instanceof Error ? error.message : error}`);
   }
 };

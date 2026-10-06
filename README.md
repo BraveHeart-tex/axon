@@ -39,7 +39,14 @@ yarn run build
 yarn link
 ```
 
-### Development Mode
+#Under classified, `--mine` skips QA-passed MRs (by default, `qa::passed`) and
+checks approved MRs for conflicts without rebasing them. `--all` allows rebasing
+approved MRs; `--include-qa` allows rebasing QA-passed MRs. Use both to include
+MRs with both protections. Pushing rewritten commits resets approvals. Develop
+targets, develop commits and unsafe ancestry are skipped with a reason. Staging
+presence is informational. Under gitflow, `--all` and `--include-qa` have no effect.
+
+## Development Mode
 
 Run in development mode without building:
 
@@ -78,6 +85,24 @@ For one-off tests, you can override the saved model with an environment variable
 AXON_AI_MODEL=qwen/qwen3-32b axon commit-ai
 ```
 
+### Per-project workflow
+
+Run `axon init` inside a repository to configure its workflow, branch names,
+branch template and Jira settings. Re-run it to edit existing settings. Config
+stays private in `~/.axon/projects/<slug>.json` (or under
+`$AXON_CONFIG_DIR/projects/`); you can also edit the file by hand.
+
+- `gitflow`: feature branches start from develop when available, otherwise main;
+  release branches ship changes from develop to main.
+- `classified`: feature branches start from the configured main branch; each MR
+  targets main and ships through the merge train. Develop is assembled for
+  staging. `axon release` is unavailable. `axon sb` autosquashes fixups and
+  refuses develop commits and develop targets.
+
+Without project config, Axon keeps the default gitflow behavior. Branch names
+such as main and develop above follow your configured names. Project settings
+override global defaults; `AXON_AI_MODEL` overrides the saved model.
+
 ## Usage
 
 ### Generate AI Commit Message
@@ -87,6 +112,22 @@ Create a meaningful commit message based on your staged changes:
 ```bash
 axon commit-ai
 ```
+
+Under classified, when the branch has non-fixup commits outside
+`origin/<main>`, the first prompt offers **New commit** or **Fix up an existing
+commit**. New commit generates an AI message for staged changes. Fix up lets you
+pick a commit, then commits staged changes with `git commit --fixup=<sha>`
+without calling AI or requiring an AI key.
+
+The fixup flow asks **Squash into <subject> and push now?** Accepting autosquashes
+on the selected commit's parent, keeping the branch's existing base, then pushes.
+Declining keeps the fixup for `axon sb`. A failed squash aborts the rebase and
+keeps the fixup; run `axon sb` to squash and rebase.
+
+Both flows push explicitly to `origin HEAD:refs/heads/<branch>` with a lease,
+even without an upstream. A new remote branch uses an empty-SHA lease. If origin
+has commits missing locally, Axon refuses the push with a `git pull --rebase`
+hint. The fixup flow checks this before rewriting history.
 
 ### Branch Management
 
@@ -117,10 +158,17 @@ axon sb [target]
 Rebase and push every open MR you authored or are assigned to:
 
 ```bash
-axon sb --mine [-y] [--concurrency <n>] [--keep-worktrees]
+axon sb --mine [-y] [--all] [--include-qa] [--concurrency <n>] [--keep-worktrees]
 ```
 
 `--mine` never touches your worktree. It rebases in the background (up to `--concurrency` MRs at once, default 4), pushes stacked MRs together, and prints a summary. **Git hooks are skipped** for every git command it runs, including `pre-push`. `--keep-worktrees` keeps the fallback rebase worktrees under `.git/axon-sync/` for debugging.
+
+Under classified, `--mine` skips QA-passed MRs (by default, `qa::passed`) and
+checks approved MRs for conflicts without rebasing them. `--all` allows rebasing
+approved MRs; `--include-qa` allows rebasing QA-passed MRs. Use both to include
+MRs with both protections. Pushing rewritten commits resets approvals. Develop
+targets, develop commits and unsafe ancestry are skipped with a reason. Staging
+presence is informational. Under gitflow, `--all` and `--include-qa` have no effect.
 
 ## Development
 
