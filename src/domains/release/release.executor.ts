@@ -8,18 +8,17 @@ import {
   deleteLocalBranch,
   localBranchExists,
 } from '@/domains/git/git.service.js';
+import { handleMrUrlGeneration } from '@/domains/mr/flows/mrUrl.flow.js';
+import { updateBranchSafely } from '@/domains/release/flows/updateBranchSafely.flow.js';
+import type { ReleasePlan } from '@/domains/release/release.types.js';
 import { logger } from '@/infra/logger.js';
 import { promptRecreateReleaseBranch } from '@/ui/prompts/release.prompts.js';
 
-import { handleMrUrlGeneration } from '../mr/flows/mrUrl.flow.js';
-import { updateBranchSafely } from './flows/updateBranchSafely.flow.js';
-import type { ReleasePlan } from './release.types.js';
-
-export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
+export const executeRelease = async (plan: ReleasePlan, mainBranch = 'main'): Promise<void> => {
   const { branchTitle, commits } = plan;
 
-  // --- Update main (may prompt to rebase — must run before any spinner) ---
-  await updateBranchSafely('main', { skipFetch: true });
+  // --- Update main (may prompt to rebase - must run before any spinner) ---
+  await updateBranchSafely(mainBranch, { skipFetch: true });
 
   // --- Create release branch ---
   const branchExists = await localBranchExists(branchTitle);
@@ -65,13 +64,13 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
       await cherryPick([hash]);
       spinner.succeed(`${c.yellow(short)} picked.`);
     } catch {
-      spinner.fail(`${c.yellow(short)} failed — aborting cherry-pick.`);
+      spinner.fail(`${c.yellow(short)} failed - aborting cherry-pick.`);
       failed.push(hash);
       try {
         await abortCherryPick();
       } catch {
         logger.warn(
-          'Could not abort cherry-pick — you may need to run `git cherry-pick --abort` manually.',
+          'Could not abort cherry-pick - you may need to run `git cherry-pick --abort` manually.',
         );
       }
       break;
@@ -92,6 +91,6 @@ export const executeRelease = async (plan: ReleasePlan): Promise<void> => {
 
   await handleMrUrlGeneration({
     sourceBranch: branchTitle,
-    targetBranch: 'main',
+    targetBranch: mainBranch,
   });
 };

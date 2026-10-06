@@ -1,12 +1,16 @@
+import {
+  inferCommitTypeFromBranch,
+  inferIntentFromBranch,
+} from '@/domains/ai/commit/inferFromBranch.js';
 import { CommitType } from '@/domains/branch/branch.constants.js';
+import { parseBranchName } from '@/domains/branch/branchTemplate.js';
 import {
   getCurrentBranchName,
   getStagedChangesDiff,
   inferJiraScopeFromBranch,
 } from '@/domains/git/git.service.js';
+import type { ProjectContext } from '@/domains/project/project.types.js';
 import { editMessageInline } from '@/shared/editMessageInline.js';
-
-import { inferCommitTypeFromBranch, inferIntentFromBranch } from '../inferFromBranch.js';
 
 export interface CommitContext {
   diff: string;
@@ -17,7 +21,7 @@ export interface CommitContext {
   expectedType?: CommitType;
 }
 
-export const resolveCommitContext = async (): Promise<CommitContext> => {
+export const resolveCommitContext = async (context?: ProjectContext): Promise<CommitContext> => {
   const diff = await getStagedChangesDiff();
 
   if (!diff) {
@@ -30,12 +34,20 @@ export const resolveCommitContext = async (): Promise<CommitContext> => {
 
   const branchName = await getCurrentBranchName();
 
+  const parsed = context
+    ? parseBranchName(context.branchTemplate, branchName, context.jira.projectKeys)
+    : null;
+
   return {
     diff,
     userHint: hint?.trim() || undefined,
     branchName,
-    inferredScope: inferJiraScopeFromBranch(branchName) || undefined,
-    branchIntent: inferIntentFromBranch(branchName),
-    expectedType: inferCommitTypeFromBranch(branchName),
+    inferredScope:
+      parsed?.key ??
+      (context?.source === 'project'
+        ? undefined
+        : inferJiraScopeFromBranch(branchName, context?.jira) || undefined),
+    branchIntent: inferIntentFromBranch(branchName, context),
+    expectedType: inferCommitTypeFromBranch(branchName, context),
   };
 };

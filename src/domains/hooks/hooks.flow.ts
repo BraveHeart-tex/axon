@@ -1,17 +1,21 @@
-import { checkbox } from '@inquirer/prompts';
+import { checkbox, confirm } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
 
 import {
+  buildHookCatalog,
   getHookMarkers,
   type HookDefinition,
   HOOKS,
   wrapScript,
 } from '@/domains/hooks/hooks.constants.js';
+import type { ProjectContext } from '@/domains/project/project.types.js';
 
-export const runHooksFlow = async () => {
+export const runHooksFlow = async (project: ProjectContext) => {
+  const catalog = buildHookCatalog(project);
+  const available = catalog.filter((hook) => hook.flows.includes(project.flow.name));
   console.log(c.cyan.bold('\n  Axon Hook Manager'));
   console.log(c.dim('  Choose which safeguards should run in this repository.\n'));
 
@@ -36,7 +40,17 @@ export const runHooksFlow = async () => {
     ).map((hook) => hook.id),
   );
 
-  const choices = HOOKS.map((hook) => {
+  const incompatible = catalog.filter(
+    (hook) => installedIds.has(hook.id) && !hook.flows.includes(project.flow.name),
+  );
+  const removeIncompatible =
+    incompatible.length > 0 &&
+    (await confirm({
+      message: `Remove hooks incompatible with ${project.flow.name}: ${incompatible.map((hook) => hook.name).join(', ')}?`,
+      default: true,
+    }));
+
+  const choices = available.map((hook) => {
     const installed = installedIds.has(hook.id);
     const installedLabel = installed ? `  ${c.green('●')} ${c.dim('installed')}` : '';
 
@@ -61,6 +75,7 @@ export const runHooksFlow = async () => {
 
   for (const { hookFile, ids } of obsoleteBlocks) {
     syncHookFile({
+      catalog,
       axonHooksDir: context.axonHooksDir,
       usesHusky: context.usesHusky,
       hookFile,
@@ -75,13 +90,17 @@ export const runHooksFlow = async () => {
   }
 
   const selectedIds = new Set(selectedHooks.map((hook) => hook.id));
-  const toUninstall = HOOKS.filter(
-    (hook) => installedIds.has(hook.id) && !selectedIds.has(hook.id),
+  const toUninstall = catalog.filter(
+    (hook) =>
+      installedIds.has(hook.id) &&
+      !selectedIds.has(hook.id) &&
+      (hook.flows.includes(project.flow.name) || removeIncompatible),
   );
-  const toInstall = selectedHooks.filter((hook) => !installedIds.has(hook.id));
+  const toInstall = selectedHooks;
 
   for (const hook of toUninstall) {
     syncHookFile({
+      catalog,
       axonHooksDir: context.axonHooksDir,
       usesHusky: context.usesHusky,
       hookFile: hook.hookFile,
@@ -104,6 +123,7 @@ export const runHooksFlow = async () => {
     }
 
     syncHookFile({
+      catalog,
       axonHooksDir: context.axonHooksDir,
       usesHusky: context.usesHusky,
       hookFile: hook.hookFile,
@@ -114,6 +134,7 @@ export const runHooksFlow = async () => {
 
   await reconcileLocalHooksPath(context);
 
+  console.log(c.dim('  re-run axon hooks after changing jira.projectKeys'));
   console.log(c.cyan('\n  Done! Your repository hooks are synchronized.'));
 };
 
@@ -252,6 +273,7 @@ const getObsoleteHookBlocks = (axonHooksDir: string) => {
 };
 
 const syncHookFile = ({
+  catalog,
   axonHooksDir,
   usesHusky,
   hookFile,
@@ -261,9 +283,10 @@ const syncHookFile = ({
   usesHusky: boolean;
   hookFile: string;
   nextHookIds: string[];
+  catalog: HookDefinition[];
 }) => {
   const filePath = path.resolve(axonHooksDir, hookFile);
-  const hookDefinitions = HOOKS.filter(
+  const hookDefinitions = catalog.filter(
     (hook) => hook.hookFile === hookFile && nextHookIds.includes(hook.id),
   );
 

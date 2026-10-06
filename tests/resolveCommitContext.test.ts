@@ -4,6 +4,8 @@ import { resolveCommitContext } from '@/domains/ai/commit/flows/resolveCommitCon
 import { getCurrentBranchName, getStagedChangesDiff } from '@/domains/git/git.service.js';
 import { editMessageInline } from '@/shared/editMessageInline.js';
 
+import { projectContext } from './helpers/projectContext.js';
+
 vi.mock('@/domains/git/git.service.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/domains/git/git.service.js')>();
 
@@ -62,6 +64,22 @@ describe('resolveCommitContext', () => {
       branchName: 'feat/add-checkout',
       branchIntent: 'add checkout',
       expectedType: 'feat',
+    });
+  });
+  it('uses the configured template and keys without inferring an absent type', async () => {
+    mockedGetStagedChangesDiff.mockResolvedValue('diff');
+    mockedEditMessageInline.mockResolvedValue('');
+    mockedGetCurrentBranchName.mockResolvedValue('APP-7/retry-copy');
+    const context = projectContext({
+      version: 1,
+      flow: 'classified',
+      branchTemplate: '{key}/{slug}',
+      jira: { projectKeys: ['APP'] },
+    });
+    await expect(resolveCommitContext(context)).resolves.toMatchObject({
+      inferredScope: 'APP-7',
+      branchIntent: 'retry copy',
+      expectedType: undefined,
     });
   });
 });

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { HOOKS } from '@/domains/hooks/hooks.constants.js';
-import { JIRA_PROJECT_LABELS, JIRA_REGEX } from '@/domains/jira/jira.constants.js';
+import { buildJiraRegex, JIRA_PROJECT_LABELS } from '@/domains/jira/jira.constants.js';
 
 const temporaryDirectories: string[] = [];
 const jiraMismatchHook = HOOKS.find((hook) => hook.id === 'warn-jira-mismatch');
@@ -73,11 +73,11 @@ describe('Jira constants', () => {
     expect(JIRA_PROJECT_LABELS).toEqual(['FE', 'ORD', 'DIS', 'PE', 'PRD', 'MEM', 'MOD']);
 
     for (const label of JIRA_PROJECT_LABELS) {
-      expect(JIRA_REGEX.test(`${label}-123`)).toBe(true);
+      expect(buildJiraRegex({ projectKeys: JIRA_PROJECT_LABELS }).test(`${label}-123`)).toBe(true);
     }
 
-    expect(JIRA_REGEX.test('ord-123')).toBe(false);
-    expect(JIRA_REGEX.test('ABC-123')).toBe(false);
+    expect(buildJiraRegex({ projectKeys: JIRA_PROJECT_LABELS }).test('ord-123')).toBe(false);
+    expect(buildJiraRegex({ projectKeys: JIRA_PROJECT_LABELS }).test('ABC-123')).toBe(false);
   });
 });
 

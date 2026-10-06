@@ -2,21 +2,20 @@ import { confirm, input, select } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import ora from 'ora';
 
+import { resolveAiModel } from '@/domains/ai/ai.config.js';
+import { getCommitMessagePrompt } from '@/domains/ai/ai.prompts.js';
+import { generateAiResponse } from '@/domains/ai/ai.service.js';
+import { normalizeGeneratedCommitMessage } from '@/domains/ai/commit/commitMessageFormatter.js';
+import { ensureAiApiKey } from '@/domains/ai/commit/flows/ensureAiApiKey.flow.js';
+import { resolveCommitContext } from '@/domains/ai/commit/flows/resolveCommitContext.flow.js';
 import { commitWithMessage, pushCurrentBranch } from '@/domains/git/git.service.js';
 import type { ProjectContext } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
 import { editMessageInline } from '@/shared/editMessageInline.js';
-
-import { resolveAiModel } from '../ai.config.js';
-import { getCommitMessagePrompt } from '../ai.prompts.js';
-import { generateAiResponse } from '../ai.service.js';
-import { normalizeGeneratedCommitMessage } from './commitMessageFormatter.js';
-import { ensureAiApiKey } from './flows/ensureAiApiKey.flow.js';
-import { resolveCommitContext } from './flows/resolveCommitContext.flow.js';
 export const runCommitAiFlow = async (projectContext: ProjectContext) => {
   try {
     const apiKey = await ensureAiApiKey();
-    const context = await resolveCommitContext();
+    const context = await resolveCommitContext(projectContext);
 
     // State for making regenerate smarter
     const rejectedMessages: string[] = [];

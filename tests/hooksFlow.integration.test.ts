@@ -2,18 +2,20 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { checkbox } from '@inquirer/prompts';
+import { checkbox, confirm } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import { execa } from 'execa';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { HOOKS, wrapScript } from '@/domains/hooks/hooks.constants.js';
+import { buildHookCatalog, HOOKS, wrapScript } from '@/domains/hooks/hooks.constants.js';
 import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
 
 import { commitFile, git } from './helpers/gitRepos.js';
+import { projectContext } from './helpers/projectContext.js';
 
 vi.mock('@inquirer/prompts', () => ({
   checkbox: vi.fn(),
+  confirm: vi.fn(),
 }));
 
 type Choice = { value: (typeof HOOKS)[number]; checked: boolean };
@@ -95,7 +97,7 @@ describe('runHooksFlow against real repos', () => {
     process.chdir(worktree);
     selectHooks(['warn-jira-mismatch']);
 
-    await runHooksFlow();
+    await runHooksFlow(projectContext());
 
     const hooksDir = path.join(repo, '.git', 'axon-hooks');
     expect(fs.existsSync(path.join(hooksDir, 'commit-msg'))).toBe(true);
@@ -119,7 +121,7 @@ describe('runHooksFlow against real repos', () => {
     process.chdir(worktree);
     selectHooks(['warn-jira-mismatch']);
 
-    await runHooksFlow();
+    await runHooksFlow(projectContext());
 
     const hooksDir = path.join(repo, '.git', 'axon-hooks');
     const commitMsg = fs.readFileSync(path.join(hooksDir, 'commit-msg'), 'utf8');
@@ -133,7 +135,7 @@ describe('runHooksFlow against real repos', () => {
     expect(mainCommit.all).toContain('husky ran in main');
 
     selectHooks([]);
-    await runHooksFlow();
+    await runHooksFlow(projectContext());
 
     expect(fs.existsSync(path.join(hooksDir, 'commit-msg'))).toBe(false);
     expect(await git(worktree, 'config', '--local', '--get', 'core.hooksPath')).toBe('.husky/_');
@@ -155,7 +157,7 @@ describe('runHooksFlow against real repos', () => {
     process.chdir(repo);
     keepInstalledSelection();
 
-    await runHooksFlow();
+    await runHooksFlow(projectContext());
 
     expect(fs.existsSync(path.join(hooksDir, 'prepare-commit-msg'))).toBe(true);
     expect(await git(repo, 'config', '--local', '--get', 'core.hooksPath')).toBe(hooksDir);
@@ -170,7 +172,7 @@ describe('runHooksFlow against real repos', () => {
     process.chdir(repo);
     keepInstalledSelection();
 
-    await runHooksFlow();
+    await runHooksFlow(projectContext());
 
     expect(fs.existsSync(path.join(hooksDir, 'post-commit'))).toBe(false);
     const commitMsg = fs.readFileSync(path.join(hooksDir, 'commit-msg'), 'utf8');
@@ -187,5 +189,90 @@ describe('runHooksFlow against real repos', () => {
 
   it('no longer offers suggest-sync', () => {
     expect(HOOKS.map((hook) => hook.id)).not.toContain('suggest-sync');
+  });
+  it.each([true, false])('offers removal of incompatible hooks, accepted=%s', async (accepted) => {
+    const hooksDir = path.join(repo, '.git', 'axon-hooks');
+    writeHookFile(hooksDir, 'prepare-commit-msg', [getHook('block-amend')]);
+    process.chdir(repo);
+    vi.mocked(confirm).mockResolvedValueOnce(accepted);
+    selectHooks(['warn-jira-mismatch']);
+    const context = projectContext({ version: 1, flow: 'classified' });
+
+    await runHooksFlow(context);
+
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('Block Amends on Release') }),
+    );
+    const choices = mockedCheckbox.mock.calls.at(-1)![0].choices as Choice[];
+    expect(choices.map((choice) => choice.value.id)).toEqual(['warn-jira-mismatch']);
+    expect(fs.existsSync(path.join(hooksDir, 'prepare-commit-msg'))).toBe(!accepted);
+    expect(fs.existsSync(path.join(hooksDir, 'commit-msg'))).toBe(true);
+  });
+
+  it('refreshes installed hooks after project keys change', async () => {
+    process.chdir(repo);
+    selectHooks(['warn-jira-mismatch']);
+    await runHooksFlow(projectContext());
+    keepInstalledSelection();
+    const context = projectContext({
+      version: 1,
+      flow: 'classified',
+      jira: { projectKeys: ['APP', 'WEB2'] },
+    });
+    await runHooksFlow(context);
+    const hooksDir = path.join(repo, '.git', 'axon-hooks');
+    const script = fs.readFileSync(path.join(hooksDir, 'commit-msg'), 'utf8');
+    expect(script).toContain('(APP|WEB2)');
+    expect(script).not.toContain('(FE|ORD|');
+    await git(repo, 'checkout', '-b', 'feat/APP-7-retry');
+    const result = await execa('git', ['commit', '--allow-empty', '-m', 'fix: WEB2-8 retry'], {
+      cwd: repo,
+      all: true,
+    });
+    expect(result.all).toContain('Branch Jira key: APP-7');
+    expect(result.all).toContain('Commit Jira key: WEB2-8');
+    expect(loggedLines(vi.mocked(console.log))).toContain(
+      '  re-run axon hooks after changing jira.projectKeys',
+    );
+  });
+
+  it('writes nothing when the picker is cancelled after accepting removal', async () => {
+    const hooksDir = path.join(repo, '.git', 'axon-hooks');
+    writeHookFile(hooksDir, 'prepare-commit-msg', [getHook('block-amend')]);
+    const original = fs.readFileSync(path.join(hooksDir, 'prepare-commit-msg'), 'utf8');
+    process.chdir(repo);
+    vi.mocked(confirm).mockResolvedValueOnce(true);
+    mockedCheckbox.mockRejectedValueOnce(new Error('cancelled'));
+    await expect(runHooksFlow(projectContext({ version: 1, flow: 'classified' }))).rejects.toThrow(
+      'cancelled',
+    );
+    expect(fs.readFileSync(path.join(hooksDir, 'prepare-commit-msg'), 'utf8')).toBe(original);
+  });
+
+  it('uses a literal configured release prefix in the shell script', async () => {
+    const context = projectContext({
+      version: 1,
+      flow: 'gitflow',
+      gitflow: { releasePrefix: "ship/'$value/" },
+    });
+    const hook = buildHookCatalog(context).find((hook) => hook.id === 'block-amend')!;
+    const bin = path.join(root, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(path.join(bin, 'ps'), '#!/bin/sh\necho git commit --amend\n', { mode: 0o755 });
+    await git(repo, 'checkout', '-b', "ship/'$value/urgent");
+    const result = await execa('sh', ['-c', hook.script], {
+      cwd: repo,
+      reject: false,
+      env: { PATH: `${bin}:${process.env.PATH}` },
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain('AMEND BLOCKED');
+    await git(repo, 'checkout', '-b', 'release/urgent');
+    const other = await execa('sh', ['-c', hook.script], {
+      cwd: repo,
+      reject: false,
+      env: { PATH: `${bin}:${process.env.PATH}` },
+    });
+    expect(other.exitCode).toBe(0);
   });
 });

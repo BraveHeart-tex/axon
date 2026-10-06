@@ -91,4 +91,9 @@ describe('updateIssueStatus', () => {
 
     await expect(updateIssueStatus(jira, 'ORD-1325', 'To Do')).resolves.toBeUndefined();
   });
+  it('skips the configured in-progress status case-insensitively', async () => {
+    await updateIssueStatus({ ...jira, inProgressStatus: 'Working' }, 'ORD-1325', 'working');
+    expect(mockedConfirm).not.toHaveBeenCalled();
+    expect(mockedGetIssueTransitions).not.toHaveBeenCalled();
+  });
 });

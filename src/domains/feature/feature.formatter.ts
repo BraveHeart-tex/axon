@@ -29,18 +29,24 @@ const formatIssueChoice = (issue: JiraIssue) => {
   };
 };
 
-export const buildIssueChoices = (issues: JiraIssue[]) => {
+export const buildIssueChoices = (
+  issues: JiraIssue[],
+  statusOrder: readonly string[] = JIRA_STATUS_ORDER,
+) => {
   const groups = new Map<string, JiraIssue[]>();
 
   for (const issue of issues) {
-    const name = issue.fields.status.name;
+    const status = issue.fields.status.name;
+    const name = statusOrder.includes(status) ? status : 'Other';
     if (!groups.has(name)) groups.set(name, []);
     groups.get(name)!.push(issue);
   }
 
   const choices = [];
 
-  for (const status of JIRA_STATUS_ORDER) {
+  for (const status of [
+    ...new Set([...statusOrder.filter((status) => status !== 'Other'), 'Other']),
+  ]) {
     const group = groups.get(status);
     if (!group?.length) continue;
 

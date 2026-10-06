@@ -11,7 +11,7 @@ import { releaseCommand } from '@/commands/release.js';
 import { syncBranchCommand } from '@/commands/syncBranch.js';
 import { runHooksFlow } from '@/domains/hooks/hooks.flow.js';
 import { printFlowBanner, reportProjectContextError } from '@/domains/project/project.formatter.js';
-import { initProjectContext } from '@/domains/project/project.service.js';
+import { getProjectContext, initProjectContext } from '@/domains/project/project.service.js';
 import { createInterruptHandler } from '@/infra/cancellation.js';
 import { AXON_LOGO } from '@/misc/logo.js';
 
@@ -90,7 +90,7 @@ program
   .alias('h')
   .description('Manage Git hooks for release branches and commit validation')
   .action(async () => {
-    await runHooksFlow();
+    await runHooksFlow(getProjectContext());
   });
 
 program

@@ -3,9 +3,9 @@ import path from 'node:path';
 
 import { execa } from 'execa';
 
-import { JIRA_REGEX } from '../jira/jira.constants.js';
-import { formatCommits } from './git.formatter.js';
-import { RecentCommit } from './git.types.js';
+import { formatCommits } from '@/domains/git/git.formatter.js';
+import { RecentCommit } from '@/domains/git/git.types.js';
+import { buildJiraRegex, JIRA_PROJECT_LABELS } from '@/domains/jira/jira.constants.js';
 
 type GitCallOptions = { cancelSignal?: AbortSignal; captureOutput?: boolean; skipHooks?: boolean };
 
@@ -26,9 +26,15 @@ export const checkoutBranch = async (branch: string) => {
   }
 };
 
-export const createBranch = async (branch: string) => {
+export const createBranch = async (branch: string, startPoint?: string) => {
   try {
-    await execa('git', ['checkout', '-b', branch], { stdio: 'inherit' });
+    await execa(
+      'git',
+      ['checkout', '-b', branch, ...(startPoint ? ['--no-track', startPoint] : [])],
+      {
+        stdio: 'inherit',
+      },
+    );
   } catch (error) {
     throw new Error(`Failed to create branch ${branch}: ${(error as Error).message}`);
   }
@@ -118,16 +124,20 @@ export const getRecentCommitsForDevelop = async ({
   limit = 50,
   onlyUnmerged = false,
   author = '',
+  mainBranch = 'main',
+  developBranch = 'develop',
 }: {
   limit: number;
   onlyUnmerged: boolean;
   author: string;
+  mainBranch?: string;
+  developBranch?: string;
 }): Promise<RecentCommit[]> => {
   if (onlyUnmerged) {
     // Get candidate commits from develop not in main (by SHA)
     const { stdout: developStdout } = await execa('git', [
       'log',
-      'origin/main...develop',
+      `origin/${mainBranch}...${developBranch}`,
       '--right-only',
       '--no-merges',
       '--pretty=format:%h|%an|%ad|%s',
@@ -143,7 +153,7 @@ export const getRecentCommitsForDevelop = async ({
     const MAIN_SUBJECT_LOOKBACK = 1000;
     const { stdout: mainStdout } = await execa('git', [
       'log',
-      'origin/main',
+      `origin/${mainBranch}`,
       '--no-merges',
       '--pretty=format:%s',
       '-n',
@@ -163,7 +173,7 @@ export const getRecentCommitsForDevelop = async ({
 
   const { stdout } = await execa('git', [
     'log',
-    'develop',
+    developBranch,
     '--pretty=format:%h|%an|%ad|%s',
     '--date=relative',
     '-n',
@@ -296,15 +306,21 @@ export const abortRebase = async () => {
   await execa('git', ['rebase', '--abort'], { stdio: 'inherit', reject: false });
 };
 
-export const inferJiraScopeFromBranch = (branch: string) => {
-  const scopeMatch = branch.match(JIRA_REGEX);
+export const inferJiraScopeFromBranch = (
+  branch: string,
+  jira: { projectKeys: readonly string[] } = { projectKeys: JIRA_PROJECT_LABELS },
+) => {
+  const scopeMatch = branch.match(buildJiraRegex(jira));
   if (!scopeMatch) return '';
 
   return scopeMatch ? scopeMatch[0] : '';
 };
 
-export const getScopeFromCommitMessage = (commitMessage: string): string => {
-  const match = commitMessage.match(JIRA_REGEX);
+export const getScopeFromCommitMessage = (
+  commitMessage: string,
+  jira: { projectKeys: readonly string[] } = { projectKeys: JIRA_PROJECT_LABELS },
+): string => {
+  const match = commitMessage.match(buildJiraRegex(jira));
   const jiraScope = match?.[0] ?? '';
 
   if (jiraScope) return jiraScope;

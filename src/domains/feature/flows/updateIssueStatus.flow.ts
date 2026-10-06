@@ -2,7 +2,6 @@ import { confirm, select } from '@inquirer/prompts';
 import c from 'ansi-colors';
 import ora from 'ora';
 
-import { IN_PROGRESS_STATUS } from '@/domains/jira/jira.constants.js';
 import { getIssueTransitions, transitionIssue } from '@/domains/jira/jira.service.js';
 import type { JiraSettings } from '@/domains/project/project.types.js';
 
@@ -11,9 +10,9 @@ export const updateIssueStatus = async (
   issueKey: string,
   currentStatus?: string,
 ): Promise<void> => {
-  if (currentStatus && currentStatus.toLowerCase() === IN_PROGRESS_STATUS.toLowerCase()) {
+  if (currentStatus && currentStatus.toLowerCase() === jira.inProgressStatus.toLowerCase()) {
     console.log(
-      `\n  ${c.dim(`${issueKey} is already ${IN_PROGRESS_STATUS}. Skipping status update.`)}`,
+      `\n  ${c.dim(`${issueKey} is already ${jira.inProgressStatus}. Skipping status update.`)}`,
     );
     return;
   }

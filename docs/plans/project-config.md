@@ -209,54 +209,54 @@ These were tested in a scratch repo:
 
 ### 2a. Branch template (`src/domains/branch/branchTemplate.ts`)
 
-- [ ] `buildBranchName(template, { type, key, slug })`:
+- [x] `buildBranchName(template, { type, key, slug })`:
   - With an empty slug, drop `{slug}` and the separator in front of it.
-- [ ] `parseBranchName(template, name) → { type?, key?, slug? } | null`:
+- [x] `parseBranchName(template, name) → { type?, key?, slug? } | null`:
   - It compiles the template into a regex, where `{type}` is one of `BRANCH_TYPES`, `{key}` matches the project keys, and `{slug}` is `[a-z0-9-]+`.
-- [ ] `feature` builds names with `buildBranchName`.
-- [ ] `inferFromBranch` and `resolveCommitContext` parse names with `parseBranchName`.
+- [x] `feature` builds names with `buildBranchName`.
+- [x] `inferFromBranch` and `resolveCommitContext` parse names with `parseBranchName`.
   - When the template has no `{type}`, the type comes from the AI only.
 
 ### 2b. `feature`
 
-- [ ] `classified`: the base is always `<main>`, with no `develop` probe.
-- [ ] `gitflow`: unchanged. The base is `<develop>` if it exists on origin, otherwise `<main>`.
+- [x] `classified`: the base is always `<main>`, with no `develop` probe.
+- [x] `gitflow`: unchanged. The base is `<develop>` if it exists on origin, otherwise `<main>`.
 
 ### 2c. `release`
 
-- [ ] `classified`: exit 1 with `axon release isn't used in the classified flow. MRs ship to main via the merge train.`
-- [ ] `gitflow`: use `mainBranch`, `developBranch` and `releasePrefix` from the context instead of literals.
+- [x] `classified`: exit 1 with `axon release isn't used in the classified flow. MRs ship to main via the merge train.`
+- [x] `gitflow`: use `mainBranch`, `developBranch` and `releasePrefix` from the context instead of literals.
 
 ### 2d. `hooks`
 
-- [ ] Each `HookDefinition` gets `flows: Flow[]`.
+- [x] Each `HookDefinition` gets `flows: Flow[]`.
   - `block-amend` is gitflow only, and `warn-jira-mismatch` is both.
   - The `release/` checks in the scripts use `releasePrefix`.
-- [ ] The picker offers only the hooks for the current flow.
+- [x] The picker offers only the hooks for the current flow.
   - If a hook from another flow is installed, offer to remove it.
-- [ ] `warn-jira-mismatch` bakes in the project's keys.
+- [x] `warn-jira-mismatch` bakes in the project's keys.
   - `hooks` prints `re-run axon hooks after changing jira.projectKeys`.
 
 ### 2e. Jira
 
-- [ ] Build `JIRA_REGEX` from `jira.projectKeys` through a function that takes the context. Remove the module constant.
-- [ ] `inProgressStatus` and `statusOrder` come from the context.
-- [ ] The picker puts any status that isn't listed into an `Other` group at the end, instead of dropping it.
+- [x] Build `JIRA_REGEX` from `jira.projectKeys` through a function that takes the context. Remove the module constant.
+- [x] `inProgressStatus` and `statusOrder` come from the context.
+- [x] The picker puts any status that isn't listed into an `Other` group at the end, instead of dropping it.
 
 ### 2f. Tests
 
-- [ ] Template build and parse, including an empty slug and a template with no `{type}`.
-- [ ] `feature` base for each flow, including classified when `develop` exists.
-- [ ] `release` refusal under classified.
-- [ ] Hook catalog filtering and the offer to remove hooks from another flow.
-- [ ] The Jira `Other` group.
-- [ ] Custom project keys in both the regex and the hook script.
+- [x] Template build and parse, including an empty slug and a template with no `{type}`.
+- [x] `feature` base for each flow, including classified when `develop` exists.
+- [x] `release` refusal under classified.
+- [x] Hook catalog filtering and the offer to remove hooks from another flow.
+- [x] The Jira `Other` group.
+- [x] Custom project keys in both the regex and the hook script.
 
 **Done when:**
 
-- [ ] In a classified scratch repo that has `develop`, `axon feature` branches from `origin/main`.
-- [ ] `axon release` refuses.
-- [ ] `axon hooks` offers only `warn-jira-mismatch`.
+- [x] In a classified scratch repo that has `develop`, `axon feature` branches from `origin/main`.
+- [x] `axon release` refuses.
+- [x] `axon hooks` offers only `warn-jira-mismatch`.
 
 ## Phase 3 - Plain `sb` under classified
 

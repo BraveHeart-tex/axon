@@ -1,23 +1,31 @@
 import c from 'ansi-colors';
 import ora from 'ora';
 
+import { buildBranchName } from '@/domains/branch/branchTemplate.js';
+import { resolveBranchMeta } from '@/domains/feature/flows/resolveBranchMeta.flow.js';
+import { resolveIssueKey } from '@/domains/feature/flows/resolveIssueKey.flow.js';
+import { updateIssueStatus } from '@/domains/feature/flows/updateIssueStatus.flow.js';
+import { checkoutAndCreateBranch } from '@/domains/git/flows/checkoutAndCreateBranch.flow.js';
+import {
+  createBranch,
+  fetchBranchFromRemote,
+  remoteBranchExists,
+} from '@/domains/git/git.service.js';
+import { CLI_MODES } from '@/domains/mode/mode.constants.js';
+import type { ProjectContext } from '@/domains/project/project.types.js';
 import { logger } from '@/infra/logger.js';
 import { promptRebaseDivergedBranch } from '@/ui/prompts/git.prompts.js';
-
-import { checkoutAndCreateBranch } from '../git/flows/checkoutAndCreateBranch.flow.js';
-import { fetchBranchFromRemote, remoteBranchExists } from '../git/git.service.js';
-import { CLI_MODES } from '../mode/mode.constants.js';
-import type { ProjectContext } from '../project/project.types.js';
-import { resolveBranchMeta } from './flows/resolveBranchMeta.flow.js';
-import { resolveIssueKey } from './flows/resolveIssueKey.flow.js';
-import { updateIssueStatus } from './flows/updateIssueStatus.flow.js';
 
 export const runFeatureFlow = async (context: ProjectContext) => {
   const cliMode = context.mode;
 
   const [{ issueKey, workType, currentStatus }, baseBranch] = await Promise.all([
     resolveIssueKey(cliMode, context.jira),
-    remoteBranchExists('develop').then((exists) => (exists ? 'develop' : 'main')),
+    context.flow.name === 'classified'
+      ? Promise.resolve(context.flow.mainBranch)
+      : remoteBranchExists(context.flow.developBranch).then((exists) =>
+          exists ? context.flow.developBranch : context.flow.mainBranch,
+        ),
   ]);
 
   const basePrefetch = fetchBranchFromRemote('origin', baseBranch).then(
@@ -26,7 +34,11 @@ export const runFeatureFlow = async (context: ProjectContext) => {
   );
 
   const { commitLabel, slug } = await resolveBranchMeta(issueKey, workType);
-  const branch = slug ? `${commitLabel}/${issueKey}-${slug}` : `${commitLabel}/${issueKey}`;
+  const branch = buildBranchName(context.branchTemplate, {
+    type: commitLabel,
+    key: issueKey,
+    slug,
+  });
 
   console.log('');
   const spinner = ora(`Creating branch from ${c.bold(baseBranch)}...`).start();
@@ -44,7 +56,11 @@ export const runFeatureFlow = async (context: ProjectContext) => {
     const prefetchError = await basePrefetch;
     if (prefetchError) throw prefetchError;
 
-    await checkoutAndCreateBranch(baseBranch, branch, onDiverged, { skipFetch: true });
+    if (context.flow.name === 'classified') {
+      await createBranch(branch, `origin/${baseBranch}`);
+    } else {
+      await checkoutAndCreateBranch(baseBranch, branch, onDiverged, { skipFetch: true });
+    }
   } catch (error) {
     spinner.fail(`Git operation failed.`);
     logger.error((error as Error).message);

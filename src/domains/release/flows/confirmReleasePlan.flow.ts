@@ -1,7 +1,7 @@
 import c from 'ansi-colors';
 import inquirer from 'inquirer';
 
-import { ReleasePlan } from '../release.types.js';
+import { ReleasePlan } from '@/domains/release/release.types.js';
 
 const formatCommitLine = (hash: string, message?: string) => {
   const shortHash = c.yellow(hash.slice(0, 7));
@@ -9,14 +9,17 @@ const formatCommitLine = (hash: string, message?: string) => {
   return `  ${shortHash}  ${msg}`;
 };
 
-export const confirmReleasePlan = async (plan: ReleasePlan): Promise<boolean> => {
+export const confirmReleasePlan = async (
+  plan: ReleasePlan,
+  mainBranch = 'main',
+): Promise<boolean> => {
   const { branchTitle, commits, recentCommits } = plan;
 
   console.log('');
   console.log(c.bold('  Release Plan'));
   console.log(c.dim('  ─────────────────────────────────────'));
   console.log(`  ${c.dim('Branch:')}  ${c.cyan(branchTitle)}`);
-  console.log(`  ${c.dim('Target:')}  ${c.cyan('main')}`);
+  console.log(`  ${c.dim('Target:')}  ${c.cyan(mainBranch)}`);
   console.log(`  ${c.dim('Commits:')} ${c.white(commits.length.toString())}`);
   console.log('');
 

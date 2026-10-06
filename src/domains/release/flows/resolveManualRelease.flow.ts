@@ -1,10 +1,8 @@
 import inquirer from 'inquirer';
 
-import type { ReleaseInput } from '../release.types.js';
+import type { ReleaseInput } from '@/domains/release/release.types.js';
 
-const BRANCH_PREFIX = 'release';
-
-export const resolveManualRelease = async (): Promise<ReleaseInput> => {
+export const resolveManualRelease = async (releasePrefix = 'release/'): Promise<ReleaseInput> => {
   const { commitHashes } = await inquirer.prompt<{ commitHashes: string }>([
     {
       type: 'input',
@@ -20,12 +18,12 @@ export const resolveManualRelease = async (): Promise<ReleaseInput> => {
     {
       type: 'input',
       name: 'title',
-      message: `Release branch name: ${BRANCH_PREFIX}/`,
+      message: `Release branch name: ${releasePrefix}`,
       validate: (input) => input.trim() !== '' || '❌ Title is required.',
     },
   ]);
 
-  const branchTitle = `${BRANCH_PREFIX}/${title.trim()}`;
+  const branchTitle = `${releasePrefix}${title.trim()}`;
 
   return {
     commits,

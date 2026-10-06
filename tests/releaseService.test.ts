@@ -9,6 +9,8 @@ import { runReleaseFlow } from '@/domains/release/release.service.js';
 import type { ReleaseInput } from '@/domains/release/release.types.js';
 import { logger } from '@/infra/logger.js';
 
+import { projectContext } from './helpers/projectContext.js';
+
 vi.mock('@/domains/git/git.service.js', () => ({
   isWorkingTreeDirty: vi.fn(),
 }));
@@ -57,7 +59,7 @@ describe('runReleaseFlow', () => {
   it('aborts with an error and does nothing when the working tree is dirty', async () => {
     mockedIsWorkingTreeDirty.mockResolvedValue(true);
 
-    await runReleaseFlow({ author: '' });
+    await runReleaseFlow({ author: '' }, projectContext());
 
     expect(logger.error).toHaveBeenCalledWith('Working tree is dirty. Commit or stash first.');
     expect(mockedResolveReleaseInput).not.toHaveBeenCalled();
@@ -67,7 +69,7 @@ describe('runReleaseFlow', () => {
   it('logs a ReleaseAbortedError as info, not a failure', async () => {
     mockedResolveReleaseInput.mockRejectedValue(createReleaseAbortedError('Release aborted.'));
 
-    await runReleaseFlow({ author: '' });
+    await runReleaseFlow({ author: '' }, projectContext());
 
     expect(logger.info).toHaveBeenCalledWith('Release aborted.');
     expect(logger.error).not.toHaveBeenCalled();
@@ -76,19 +78,31 @@ describe('runReleaseFlow', () => {
   it('logs unexpected errors as a failure', async () => {
     mockedResolveReleaseInput.mockRejectedValue(new Error('network down'));
 
-    await runReleaseFlow({ author: '' });
+    await runReleaseFlow({ author: '' }, projectContext());
 
     expect(logger.error).toHaveBeenCalledWith('Release failed: network down');
     expect(logger.info).not.toHaveBeenCalled();
   });
 
   it('runs the full release when confirmed and the tree is clean', async () => {
-    await runReleaseFlow({ author: '' });
+    await runReleaseFlow({ author: '' }, projectContext());
 
-    expect(mockedExecuteRelease).toHaveBeenCalledWith({
-      branchTitle: input.branchTitle,
-      commits: input.commits,
-      recentCommits: input.recentCommits,
-    });
+    expect(mockedExecuteRelease).toHaveBeenCalledWith(
+      {
+        branchTitle: input.branchTitle,
+        commits: input.commits,
+        recentCommits: input.recentCommits,
+      },
+      'main',
+    );
+  });
+  it('exits cleanly without executing a release when a prompt is cancelled', async () => {
+    const error = new Error('cancelled');
+    error.name = 'ExitPromptError';
+    mockedResolveReleaseInput.mockRejectedValue(error);
+    await runReleaseFlow({ author: '' }, projectContext());
+    expect(logger.info).toHaveBeenCalledWith('Release cancelled.');
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(mockedExecuteRelease).not.toHaveBeenCalled();
   });
 });
